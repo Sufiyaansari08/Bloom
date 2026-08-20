@@ -24,6 +24,7 @@ import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
+import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
 // Calendar
 import '../../features/calendar/presentation/pages/calendar_page.dart';
 
@@ -111,6 +112,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/insights',
           builder: (context, state) => const InsightsPage(),
+        ),
+        GoRoute(
+          path: '/insights/cycle_patterns',
+          builder: (context, state) => const CyclePatternsPage(),
         ),
         GoRoute(
           path: '/profile',

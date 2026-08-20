@@ -20,19 +20,30 @@ class CycleStatusCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0), // A soft, warm, peachy-cream that pairs beautifully with light pink
+        color: AppColors.primaryPink.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(30),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        children: [
+          Positioned(
+            right: 5,
+            bottom: 0,
+            child: Image.asset(
+              'assets/images/cycle_card_bg.png',
+              width: 180,
+              fit: BoxFit.contain,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Cycle Day $cycleDay',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 16,
-                    color: AppColors.secondaryText,
+                    color: AppColors.text.withValues(alpha: 0.75),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -57,9 +68,9 @@ class CycleStatusCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'Period: $periodDateRange',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.secondaryText,
+                        color: AppColors.text.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
@@ -78,9 +89,9 @@ class CycleStatusCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       'Fertile window: $fertileWindowRange',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.secondaryText,
+                        color: AppColors.text.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
@@ -88,6 +99,8 @@ class CycleStatusCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
     );
   }
 }

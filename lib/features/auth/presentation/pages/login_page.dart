@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_button.dart';
@@ -12,6 +13,7 @@ class LoginPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.text),
           onPressed: () {

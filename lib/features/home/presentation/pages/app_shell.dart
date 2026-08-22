@@ -13,7 +13,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     int currentIndex = 0;
-    if (location.startsWith('/history')) currentIndex = 1;
+    if (location.startsWith('/calendar')) currentIndex = 1;
     if (location.startsWith('/insights')) currentIndex = 2;
     if (location.startsWith('/profile')) currentIndex = 3;
 
@@ -46,9 +46,9 @@ class AppShell extends StatelessWidget {
               ),
               _NavItem(
                 icon: currentIndex == 1 ? Icons.calendar_month : Icons.calendar_month_outlined,
-                label: 'History',
+                label: 'Calendar',
                 isSelected: currentIndex == 1,
-                onTap: () => context.go('/history'),
+                onTap: () => context.go('/calendar'),
               ),
               
               // The plus icon kept perfectly inline with the other navigation items

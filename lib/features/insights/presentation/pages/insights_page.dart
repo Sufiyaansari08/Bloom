@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/info_dialog.dart';
 import '../widgets/insights_hero_card.dart';
 import '../widgets/insights_grid_button.dart';
+import '../../../doctor_report/presentation/widgets/doctor_report_banner.dart';
 import '../widgets/bloom_pro_banner.dart';
 
 class InsightsPage extends StatelessWidget {
@@ -23,11 +25,15 @@ class InsightsPage extends StatelessWidget {
                 children: [
                   Text(
                     'Insights',
-                    style: Theme.of(context).textTheme.displayLarge,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontSize: 28,
+                        ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.notifications_none, color: AppColors.text),
-                    onPressed: () {},
+                    onPressed: () {
+                      context.push('/reminders');
+                    },
                   ),
                 ],
               ),
@@ -42,10 +48,19 @@ class InsightsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: AppColors.secondaryText.withValues(alpha: 0.8),
+                  GestureDetector(
+                    onTap: () {
+                      showPageInfoDialog(
+                        context,
+                        title: 'Insights Overview',
+                        description: 'This dashboard provides a quick overview of your health patterns based on your last 6 cycles.',
+                      );
+                    },
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColors.secondaryText.withValues(alpha: 0.8),
+                    ),
                   ),
                 ],
               ),
@@ -85,36 +100,39 @@ class InsightsPage extends StatelessWidget {
                     icon: Icons.face_retouching_natural,
                     iconColor: AppColors.primaryPurple,
                     label: 'Symptoms\nPatterns',
-                    onTap: () {},
+                    onTap: () => context.push('/insights/symptoms'),
                   ),
                   InsightsGridButton(
                     icon: Icons.bolt_outlined,
                     iconColor: Colors.orangeAccent,
                     label: 'Pain\nInsights',
-                    onTap: () {},
+                    onTap: () => context.push('/insights/pain'),
                   ),
                   InsightsGridButton(
                     icon: Icons.sentiment_satisfied_alt,
                     iconColor: Colors.blueAccent,
                     label: 'Mood\nTrends',
-                    onTap: () {},
+                    onTap: () => context.push('/insights/mood'),
                   ),
                   InsightsGridButton(
                     icon: Icons.local_drink_outlined,
                     iconColor: Colors.green,
                     label: 'Lifestyle\nInsights',
-                    onTap: () {},
+                    onTap: () => context.push('/insights/lifestyle'),
                   ),
                   InsightsGridButton(
                     icon: Icons.compare_arrows,
-                    iconColor: Colors.teal,
+                    iconColor: Colors.teal, // Kept color consistent with previous
                     label: 'Compare\nCycles',
-                    onTap: () {},
+                    onTap: () => context.push('/insights/compare'),
                   ),
                 ],
               ),
               
               const SizedBox(height: 32),
+
+              const DoctorReportBanner(),
+              const SizedBox(height: 16),
 
               // Pro Banner
               const BloomProBanner(),

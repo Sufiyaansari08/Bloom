@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class CyclePatternsPage extends StatelessWidget {
+class CyclePatternsPage extends StatefulWidget {
   const CyclePatternsPage({super.key});
 
   @override
+  State<CyclePatternsPage> createState() => _CyclePatternsPageState();
+}
+
+class _CyclePatternsPageState extends State<CyclePatternsPage> {
+  int _selectedCycles = 6;
+  final List<double> _allDummyValues = [28.0, 30.0, 29.0, 31.0, 30.0, 29.0, 28.0, 32.0];
+
+  @override
   Widget build(BuildContext context) {
+    final currentData = _allDummyValues.take(_selectedCycles).toList();
+    final averageCycle = (currentData.reduce((a, b) => a + b) / currentData.length).round();
+    final shortestCycle = currentData.reduce((a, b) => a < b ? a : b).round();
+    final longestCycle = currentData.reduce((a, b) => a > b ? a : b).round();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -28,332 +42,289 @@ class CyclePatternsPage extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month_outlined, color: AppColors.text),
-            onPressed: () {},
+            icon: const Icon(Icons.info_outline, color: AppColors.text),
+            onPressed: () {
+              showPageInfoDialog(
+                context,
+                title: 'Cycle Patterns',
+                description: 'Review the lengths of your previous cycles to understand variations and establish a baseline.',
+              );
+            },
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Dropdown
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text(
-                      'Last 6 cycles',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w500,
+                child: PopupMenuButton<int>(
+                  initialValue: _selectedCycles,
+                  position: PopupMenuPosition.under,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                  onSelected: (int newValue) {
+                    setState(() {
+                      _selectedCycles = newValue;
+                    });
+                  },
+                  itemBuilder: (BuildContext context) {
+                    return [3, 4, 5, 6, 7, 8].map((int value) {
+                      return PopupMenuItem<int>(
+                        value: value,
+                        child: Text(
+                          'Last $value cycles',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.text,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Last $_selectedCycles cycles',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      color: AppColors.primaryPurple,
-                      size: 20,
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.primaryPurple,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-            // Average cycle length title
-            const Text(
-              'Average cycle length',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.text,
+            // CARD 1: Average Cycle Length with Bar Chart
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Average cycle length',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$averageCycle',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'days',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 150,
+                    child: BarChart(
+                      BarChartData(
+                        minY: 0,
+                        maxY: 35,
+                        gridData: const FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 7,
+                        ),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 30,
+                              interval: 7,
+                              getTitlesWidget: (value, meta) {
+                                return SideTitleWidget(
+                                  meta: meta,
+                                  space: 8,
+                                  child: Text(
+                                    value.toInt().toString(),
+                                    style: const TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                return SideTitleWidget(
+                                  meta: meta,
+                                  space: 8,
+                                  child: Text(
+                                    'C${value.toInt()}',
+                                    style: const TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        barGroups: List.generate(_selectedCycles, (index) {
+                          return _buildBarData(index + 1, currentData[index]);
+                        }),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            
+            const SizedBox(height: 16),
+
+            // ROW 2: 3 Small Stat Boxes
             Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
               children: [
-                const Text(
-                  '29',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'days',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // Line Chart
-            SizedBox(
-              height: 150,
-              child: LineChart(
-                LineChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30,
-                        getTitlesWidget: (value, meta) {
-                          const style = TextStyle(color: AppColors.secondaryText, fontSize: 12);
-                          String text = '';
-                          if (value == 1) text = 'Cycle 1';
-                          if (value == 2) text = '2';
-                          if (value == 3) text = '3';
-                          if (value == 4) text = '4';
-                          if (value == 5) text = '5';
-                          if (value == 6) text = '6';
-                          return SideTitleWidget(
-                            meta: meta,
-                            space: 8.0,
-                            child: Text(text, style: style),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  minX: 1,
-                  maxX: 6,
-                  minY: 25,
-                  maxY: 35,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: const [
-                        FlSpot(1, 28),
-                        FlSpot(2, 30),
-                        FlSpot(3, 29),
-                        FlSpot(4, 31),
-                        FlSpot(5, 30),
-                        FlSpot(6, 29),
-                      ],
-                      isCurved: true,
-                      color: AppColors.primaryPink,
-                      barWidth: 3,
-                      isStrokeCapRound: true,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 4,
-                            color: Colors.white,
-                            strokeWidth: 2,
-                            strokeColor: AppColors.primaryPink,
-                          );
-                        },
-                      ),
-                      belowBarData: BarAreaData(show: false),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Stats Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSmallStat('Shortest cycle', '28'),
-                _buildSmallStat('Longest cycle', '31'),
-                _buildSmallStat('Average period', '5'),
+                _buildSmallStatBox('Shortest cycle', '$shortestCycle'),
+                const SizedBox(width: 8),
+                _buildSmallStatBox('Longest cycle', '$longestCycle'),
+                const SizedBox(width: 8),
+                _buildSmallStatBox('Average period', '5'),
               ],
             ),
             
-            const SizedBox(height: 32),
-            const Divider(color: AppColors.border),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
 
-            // Cycle Variation
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Cycle variation',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: const [
-                        Text(
-                          '±2',
+            // CARD 2: Cycle Variation
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Cycle variation',
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.text,
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          'days',
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: const [
+                            Text(
+                              '±2',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'days',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Your cycles are fairly consistent.',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: AppColors.secondaryText,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Your cycles are fairly consistent.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  width: 64,
-                  height: 64,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        value: 1.0,
-                        strokeWidth: 8,
-                        color: AppColors.border,
-                      ),
-                      CircularProgressIndicator(
-                        value: 0.8,
-                        strokeWidth: 8,
-                        color: AppColors.primaryPurple,
-                        strokeCap: StrokeCap.round,
-                      ),
-                    ],
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 40),
-
-            // Cycle Length over time
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text(
-                  'Cycle length over time',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.text,
-                  ),
-                ),
-                Text(
-                  'Aug\n29',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Bar Chart
-            SizedBox(
-              height: 150,
-              child: BarChart(
-                BarChartData(
-                  gridData: const FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 7,
-                  ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30,
-                        getTitlesWidget: (value, meta) {
-                          return SideTitleWidget(
-                            meta: meta,
-                            space: 8,
-                            child: Text(
-                              value.toInt().toString(),
-                              style: const TextStyle(
-                                color: AppColors.secondaryText,
-                                fontSize: 10,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: (value, meta) {
-                          return SideTitleWidget(
-                            meta: meta,
-                            space: 8,
-                            child: Text(
-                              'C${value.toInt()}',
-                              style: const TextStyle(
-                                color: AppColors.secondaryText,
-                                fontSize: 10,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const CircularProgressIndicator(
+                          value: 1.0,
+                          strokeWidth: 8,
+                          color: AppColors.border,
+                        ),
+                        const CircularProgressIndicator(
+                          value: 0.8,
+                          strokeWidth: 8,
+                          color: AppColors.primaryPurple,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ],
                     ),
                   ),
-                  borderData: FlBorderData(show: false),
-                  barGroups: [
-                    _buildBarData(1, 28),
-                    _buildBarData(2, 30),
-                    _buildBarData(3, 29),
-                    _buildBarData(4, 31),
-                    _buildBarData(5, 30),
-                    _buildBarData(6, 29),
-                  ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 40),
 
-            // About your cycles card
+            const SizedBox(height: 16),
+
+            // CARD 3: About your cycles
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -388,7 +359,6 @@ class CyclePatternsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Flower icon placeholder
                   Icon(
                     Icons.local_florist,
                     color: AppColors.primaryPink.withValues(alpha: 0.5),
@@ -403,41 +373,52 @@ class CyclePatternsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSmallStat(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.secondaryText,
-          ),
+  Widget _buildSmallStatBox(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
         ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              value,
+              label,
               style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.text,
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Text(
-              'days',
-              style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
                 color: AppColors.secondaryText,
               ),
             ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Text(
+                  'days',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 

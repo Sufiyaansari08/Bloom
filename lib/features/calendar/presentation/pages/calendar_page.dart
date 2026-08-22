@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/calendar_provider.dart';
@@ -25,11 +26,25 @@ class CalendarPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Calendar',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: 28,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Calendar',
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontSize: 28,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none,
+                      color: AppColors.text,
                     ),
+                    onPressed: () {
+                      context.push('/reminders');
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               BloomCalendar(

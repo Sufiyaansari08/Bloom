@@ -25,8 +25,20 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
+import '../../features/insights/presentation/pages/symptoms_patterns_page.dart';
+import '../../features/insights/presentation/pages/pain_insights_page.dart';
+import '../../features/insights/presentation/pages/mood_trends_page.dart';
+import '../../features/insights/presentation/pages/lifestyle_insights_page.dart';
+import '../../features/insights/presentation/pages/compare_cycles_page.dart';
+
 // Calendar
 import '../../features/calendar/presentation/pages/calendar_page.dart';
+
+// History
+// Doctor Report
+import '../../features/doctor_report/presentation/pages/doctor_report_setup_page.dart';
+import '../../features/doctor_report/presentation/pages/doctor_report_result_page.dart';
+import '../../features/reminders/presentation/pages/reminders_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -35,6 +47,8 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/welcome',
   routes: [
+
+
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomePage(),
@@ -88,6 +102,10 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const CheckinNotesPage(),
     ),
     GoRoute(
+      path: '/reminders',
+      builder: (context, state) => const RemindersPage(),
+    ),
+    GoRoute(
       path: '/period_logging/start',
       builder: (context, state) => const PeriodStartPage(),
     ),
@@ -106,7 +124,7 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => const HomePage(),
         ),
         GoRoute(
-          path: '/history',
+          path: '/calendar',
           builder: (context, state) => const CalendarPage(),
         ),
         GoRoute(
@@ -116,6 +134,34 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/insights/cycle_patterns',
           builder: (context, state) => const CyclePatternsPage(),
+        ),
+        GoRoute(
+          path: '/insights/symptoms',
+          builder: (context, state) => const SymptomsPatternsPage(),
+        ),
+        GoRoute(
+          path: '/insights/pain',
+          builder: (context, state) => const PainInsightsPage(),
+        ),
+        GoRoute(
+          path: '/insights/mood',
+          builder: (context, state) => const MoodTrendsPage(),
+        ),
+        GoRoute(
+          path: '/insights/lifestyle',
+          builder: (context, state) => const LifestyleInsightsPage(),
+        ),
+        GoRoute(
+          path: '/insights/compare',
+          builder: (context, state) => const CompareCyclesPage(),
+        ),
+        GoRoute(
+          path: '/doctor_report/setup',
+          builder: (context, state) => const DoctorReportSetupPage(),
+        ),
+        GoRoute(
+          path: '/doctor_report/result',
+          builder: (context, state) => const DoctorReportResultPage(),
         ),
         GoRoute(
           path: '/profile',

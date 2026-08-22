@@ -38,32 +38,30 @@ class BloomProBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: () {
-                // Navigate to pro upgrade screen
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryPink,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
+          InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: double.infinity,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primaryPink,
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+              alignment: Alignment.center,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
                     'Upgrade Now',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: Colors.white,
                     ),
                   ),
                   SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_ios, size: 12),
+                  Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white),
                 ],
               ),
             ),

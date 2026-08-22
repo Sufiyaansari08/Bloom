@@ -23,12 +23,12 @@ class QuickActionsGrid extends StatelessWidget {
         _QuickAction(
           icon: Icons.calendar_month_outlined,
           label: 'Calendar',
-          onTap: () {},
+          onTap: () => context.go('/calendar'),
         ),
         _QuickAction(
-          icon: Icons.insights,
-          label: 'Insights',
-          onTap: () {},
+          icon: Icons.assignment_outlined,
+          label: 'Report',
+          onTap: () => context.push('/doctor_report/setup'),
         ),
       ],
     );

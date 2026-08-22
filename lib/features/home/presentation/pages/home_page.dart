@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../providers/home_provider.dart';
 import '../widgets/cycle_status_card.dart';
 import '../widgets/body_today_card.dart';
 import '../widgets/summary_metrics_row.dart';
 import '../widgets/quick_actions_grid.dart';
+import '../../../doctor_report/presentation/widgets/doctor_report_banner.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -32,8 +35,13 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.notifications_none),
-                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.notifications_none,
+                      color: AppColors.text,
+                    ),
+                    onPressed: () {
+                      context.push('/reminders');
+                    },
                   ),
                 ],
               ),
@@ -63,6 +71,8 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               const QuickActionsGrid(),
+              const SizedBox(height: 32),
+              const DoctorReportBanner(),
             ],
           ),
         ),

@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/database/database_providers.dart';
 
-class InsightsHeroCard extends StatelessWidget {
+class InsightsHeroCard extends ConsumerWidget {
   const InsightsHeroCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(userProfileStreamProvider);
+    final user = userAsync.value;
+    final avgCycleLength = user?.avgCycleLength.toString() ?? '28';
+    final avgPeriodLength = user?.avgPeriodLength.toString() ?? '5';
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.primaryPink.withValues(alpha: 0.20),
@@ -67,8 +74,8 @@ class InsightsHeroCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildStatColumn('Average cycle', '29', 'days'),
-                _buildStatColumn('Average period', '5', 'days'),
+                _buildStatColumn('Average cycle', avgCycleLength, 'days'),
+                _buildStatColumn('Average period', avgPeriodLength, 'days'),
                 _buildStatColumn('Cycle variation', '±2', 'days'),
               ],
             ),

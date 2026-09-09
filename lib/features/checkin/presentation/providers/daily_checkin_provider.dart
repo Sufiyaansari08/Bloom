@@ -1,4 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/database/database_providers.dart';
 
 class DailyCheckinState {
   final String? mood; // Great, Good, Okay, Not great, Bad
@@ -53,7 +57,10 @@ class DailyCheckinState {
 }
 
 class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
-  DailyCheckinNotifier() : super(DailyCheckinState());
+  final Ref _ref;
+  static const _uuid = Uuid();
+
+  DailyCheckinNotifier(this._ref) : super(DailyCheckinState());
 
   void setMood(String mood) {
     state = state.copyWith(mood: mood);
@@ -63,7 +70,6 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
     final updatedSymptoms = List<String>.from(state.symptoms);
     if (updatedSymptoms.contains(symptom)) {
       updatedSymptoms.remove(symptom);
-      // Remove rating if symptom is removed
       final updatedRatings = Map<String, int>.from(state.symptomRatings);
       updatedRatings.remove(symptom);
       state = state.copyWith(symptoms: updatedSymptoms, symptomRatings: updatedRatings);
@@ -105,12 +111,70 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
   void setNotes(String notes) {
     state = state.copyWith(notes: notes);
   }
-  
+
+  double? _parseSleep(String? sleepStr) {
+    if (sleepStr == null) return null;
+    final match = RegExp(r'(\d+)h(?:\s*(\d+)m)?').firstMatch(sleepStr);
+    if (match != null) {
+      final hours = double.tryParse(match.group(1) ?? '0') ?? 0;
+      final mins = double.tryParse(match.group(2) ?? '0') ?? 0;
+      return hours + (mins / 60.0);
+    }
+    return double.tryParse(sleepStr);
+  }
+
+  Future<void> saveToDatabase(DateTime date) async {
+    final logRepo = _ref.read(dailyLogRepositoryProvider);
+    final symptomRepo = _ref.read(symptomRepositoryProvider);
+    final userRepo = _ref.read(userRepositoryProvider);
+    final cycleRepo = _ref.read(cycleRepositoryProvider);
+
+    final user = await userRepo.getUserProfile();
+    final userId = user?.id ?? _uuid.v4();
+    final currentCycle = await cycleRepo.getCurrentCycle();
+
+    final cleanDate = DateTime(date.year, date.month, date.day);
+    final existingLog = await logRepo.getLogForDate(cleanDate);
+    final logId = existingLog?.id ?? _uuid.v4();
+    final sleepHours = _parseSleep(state.sleep);
+
+    await logRepo.upsertDailyLog(
+      DailyLogsCompanion(
+        id: Value(logId),
+        userId: Value(userId),
+        cycleId: Value(currentCycle?.id),
+        date: Value(cleanDate),
+        mood: Value(state.mood),
+        sleepHours: Value(sleepHours),
+        waterIntake: Value(state.waterIntake),
+        stressLevel: Value(state.stressLevel),
+        activityLevel: Value(state.activity),
+        remedies: Value(state.remedies.isEmpty ? null : state.remedies.join(', ')),
+        painAfter1Hr: Value(state.painAfter1Hour),
+        notes: Value(state.notes.isEmpty ? null : state.notes),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+
+    // Save individual symptoms
+    final symptomCompanions = state.symptoms.map((symptom) {
+      final rating = state.symptomRatings[symptom] ?? 5;
+      return DailySymptomsCompanion.insert(
+        id: _uuid.v4(),
+        dailyLogId: logId,
+        symptomName: symptom,
+        severity: Value(rating),
+      );
+    }).toList();
+
+    await symptomRepo.setSymptomsForLog(logId, symptomCompanions);
+  }
+
   void clear() {
     state = DailyCheckinState();
   }
 }
 
 final dailyCheckinProvider = StateNotifierProvider<DailyCheckinNotifier, DailyCheckinState>((ref) {
-  return DailyCheckinNotifier();
+  return DailyCheckinNotifier(ref);
 });

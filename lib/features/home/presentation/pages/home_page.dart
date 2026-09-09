@@ -28,7 +28,7 @@ class HomePage extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Good morning, ${state.userName} 🌸',
+                      'Good morning, ${state.userName}\u00A0🌸',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                             fontSize: 24,
                           ),

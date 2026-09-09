@@ -13,6 +13,30 @@ class SummaryMetricsRow extends StatelessWidget {
     required this.mood,
   });
 
+  String _getPainSubtext() {
+    if (painLevel == 0) return 'None';
+    if (painLevel <= 3) return 'Mild';
+    if (painLevel <= 6) return 'Moderate';
+    return 'Severe';
+  }
+
+  String _getMoodEmoji() {
+    switch (mood.toLowerCase()) {
+      case 'great': return '🤩';
+      case 'good': return '🙂';
+      case 'okay': return '😐';
+      case 'not great': return '😔';
+      case 'bad': return '😫';
+      default: return '-';
+    }
+  }
+
+  String _getMoodSubtext() {
+    if (mood.toLowerCase() == 'not great') return 'Not Great';
+    if (mood == 'None' || mood.isEmpty) return 'None';
+    return mood[0].toUpperCase() + mood.substring(1).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
@@ -21,8 +45,8 @@ class SummaryMetricsRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _MetricItem(label: 'Symptoms', value: '$symptomsLogged', subtext: 'Logged today'),
-          _MetricItem(label: 'Pain', value: '$painLevel', valueSuffix: '/10', subtext: 'Moderate'),
-          _MetricItem(label: 'Mood', value: '🙂', subtext: 'Ok'),
+          _MetricItem(label: 'Pain', value: '$painLevel', valueSuffix: '/10', subtext: _getPainSubtext()),
+          _MetricItem(label: 'Mood', value: _getMoodEmoji(), subtext: _getMoodSubtext()),
         ],
       ),
     );

@@ -4,8 +4,24 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_app_bar.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 
-class SignUpPage extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../features/onboarding/presentation/providers/onboarding_provider.dart';
+
+class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
+
+  @override
+  ConsumerState<SignUpPage> createState() => _SignUpPageState();
+}
+
+class _SignUpPageState extends ConsumerState<SignUpPage> {
+  final TextEditingController _emailController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +30,7 @@ class SignUpPage extends StatelessWidget {
         progress: 0.0,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -32,6 +48,7 @@ class SignUpPage extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               TextField(
+                controller: _emailController,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   filled: true,
@@ -64,11 +81,15 @@ class SignUpPage extends StatelessWidget {
                 ),
                 obscureText: true,
               ),
-              const Spacer(),
+              const SizedBox(height: 40),
               BloomButton(
                 text: 'Create Account',
                 onPressed: () {
-                  context.push('/onboarding/last_period');
+                  final email = _emailController.text.trim();
+                  if (email.isNotEmpty) {
+                    ref.read(onboardingProvider.notifier).setUserEmail(email);
+                  }
+                  context.push('/onboarding/name');
                 },
               ),
               const SizedBox(height: 16),

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class OnboardingState {
+  final String? userName;
+  final String? userEmail;
   final DateTime? lastPeriodDate;
   final String? periodDuration;
   final String? cycleDuration;
@@ -8,6 +10,8 @@ class OnboardingState {
   final List<String> goals;
 
   OnboardingState({
+    this.userName,
+    this.userEmail,
     this.lastPeriodDate,
     this.periodDuration,
     this.cycleDuration,
@@ -16,6 +20,8 @@ class OnboardingState {
   });
 
   OnboardingState copyWith({
+    String? userName,
+    String? userEmail,
     DateTime? lastPeriodDate,
     String? periodDuration,
     String? cycleDuration,
@@ -23,6 +29,8 @@ class OnboardingState {
     List<String>? goals,
   }) {
     return OnboardingState(
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
       lastPeriodDate: lastPeriodDate ?? this.lastPeriodDate,
       periodDuration: periodDuration ?? this.periodDuration,
       cycleDuration: cycleDuration ?? this.cycleDuration,
@@ -34,6 +42,14 @@ class OnboardingState {
 
 class OnboardingNotifier extends StateNotifier<OnboardingState> {
   OnboardingNotifier() : super(OnboardingState());
+
+  void setUserName(String name) {
+    state = state.copyWith(userName: name);
+  }
+
+  void setUserEmail(String email) {
+    state = state.copyWith(userEmail: email);
+  }
 
   void setLastPeriodDate(DateTime date) {
     state = state.copyWith(lastPeriodDate: date);

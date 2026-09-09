@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/calendar_provider.dart';
-import '../../../checkin/presentation/providers/checkin_history_provider.dart';
 import '../widgets/bloom_calendar.dart';
 import '../widgets/daily_summary_card.dart';
 
@@ -120,7 +119,7 @@ class CalendarPage extends ConsumerWidget {
                 date: state.selectedDay,
                 isPeriodDay: isPeriodDay,
                 isFertileDay: isFertileDay,
-                checkinData: ref.watch(checkinHistoryProvider)[DateTime.utc(state.selectedDay.year, state.selectedDay.month, state.selectedDay.day)],
+                checkinData: ref.watch(dailyCheckinForSelectedDayProvider).value,
               ),
               const SizedBox(height: 32),
               Text(
@@ -140,7 +139,7 @@ class CalendarPage extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    if (state.periodDays.isNotEmpty) ...[
+                    if (state.expectedPeriodDays.isNotEmpty) ...[
                       Row(
                         children: [
                           Container(
@@ -154,7 +153,7 @@ class CalendarPage extends ConsumerWidget {
                           const SizedBox(width: 16),
                           Expanded(
                             child: Text(
-                              'Period expected ${state.periodDays.first.day}-${state.periodDays.last.day} ${_getMonthName(state.periodDays.first.month)}',
+                              'Period expected ${state.expectedPeriodDays.first.day}-${state.expectedPeriodDays.last.day} ${_getMonthName(state.expectedPeriodDays.first.month)}',
                               style: const TextStyle(
                                 color: AppColors.text,
                                 fontWeight: FontWeight.w600,

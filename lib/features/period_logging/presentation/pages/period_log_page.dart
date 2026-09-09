@@ -8,6 +8,9 @@ import '../../../../shared/widgets/bloom_flow_option.dart';
 import '../../../../shared/widgets/bloom_slider.dart';
 import '../../../../shared/widgets/bloom_grid_item.dart';
 import '../providers/period_logging_provider.dart';
+import '../../../../core/database/database_providers.dart';
+import '../../../../core/database/app_database.dart';
+import 'package:drift/drift.dart' as drift;
 
 class PeriodLogPage extends ConsumerWidget {
   const PeriodLogPage({super.key});
@@ -147,9 +150,74 @@ class PeriodLogPage extends ConsumerWidget {
               BloomButton(
                 text: 'Save',
                 backgroundColor: AppColors.primaryPink,
-                onPressed: () {
+                onPressed: () async {
+                  final userRepo = ref.read(userRepositoryProvider);
+                  final user = await userRepo.getUserProfile();
+
+                  if (user != null) {
+                    final cycleRepo = ref.read(cycleRepositoryProvider);
+                    final currentCycle = await cycleRepo.getCurrentCycle();
+
+                    String cycleId;
+                    
+                    // If there's an ongoing cycle and it's not starting today, close it.
+                    // If it started today, we can just log into it.
+                    // For simplicity in a prototype, if they are logging "Day 1" (which PeriodStartPage implies), we create a new cycle.
+                    if (currentCycle != null && currentCycle.startDate.difference(DateTime.now()).inDays.abs() > 1) {
+                      // Close previous cycle
+                      await cycleRepo.completeCycle(
+                        currentCycle.id, 
+                        DateTime.now().subtract(const Duration(days: 1)), 
+                        DateTime.now().difference(currentCycle.startDate).inDays, 
+                        user.avgPeriodLength,
+                      );
+                      
+                      // Create new cycle
+                      cycleId = DateTime.now().millisecondsSinceEpoch.toString();
+                      await cycleRepo.insertCycle(
+                        CyclesCompanion.insert(
+                          id: cycleId,
+                          userId: user.id,
+                          startDate: DateTime.now(),
+                          cycleLength: drift.Value(user.avgCycleLength),
+                          periodLength: drift.Value(user.avgPeriodLength),
+                        )
+                      );
+                    } else if (currentCycle != null) {
+                      cycleId = currentCycle.id;
+                    } else {
+                      // No current cycle at all
+                      cycleId = DateTime.now().millisecondsSinceEpoch.toString();
+                      await cycleRepo.insertCycle(
+                        CyclesCompanion.insert(
+                          id: cycleId,
+                          userId: user.id,
+                          startDate: DateTime.now(),
+                          cycleLength: drift.Value(user.avgCycleLength),
+                          periodLength: drift.Value(user.avgPeriodLength),
+                        )
+                      );
+                    }
+
+                    final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+                    final logId = DateTime.now().millisecondsSinceEpoch.toString();
+
+                    await dailyLogRepo.upsertDailyLog(
+                      DailyLogsCompanion.insert(
+                        id: logId,
+                        userId: user.id,
+                        cycleId: drift.Value(cycleId),
+                        date: DateTime.now(),
+                        flowIntensity: drift.Value(selectedFlow),
+                        painLevel: drift.Value(painLevel),
+                      )
+                    );
+                  }
+
                   ref.read(periodLoggingProvider.notifier).clear();
-                  context.go('/home'); // Complete flow, back to home
+                  if (context.mounted) {
+                    context.go('/home'); // Complete flow, back to home
+                  }
                 },
               ),
             ],

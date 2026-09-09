@@ -23,7 +23,7 @@ class DailySummaryCard extends StatelessWidget {
     // 1. Cycle Status Card (Period or Fertile)
     if (isPeriodDay || isFertileDay) {
       String statusTitle = isPeriodDay ? 'Period Day' : 'Fertile Window';
-      String statusSubtitle = isPeriodDay ? 'Medium flow logged' : 'High chance of pregnancy';
+      String statusSubtitle = isPeriodDay ? 'Predicted period day' : 'High chance of pregnancy';
       Color iconColor = isPeriodDay ? AppColors.primaryPink : Colors.green;
       IconData icon = isPeriodDay ? Icons.water_drop : Icons.favorite_border;
 

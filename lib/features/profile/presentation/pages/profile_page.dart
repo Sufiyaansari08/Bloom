@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class ProfilePage extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/database_providers.dart';
+
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(userProfileStreamProvider);
+    final userName = userAsync.value?.name ?? 'Guest';
+    final userEmail = userAsync.value?.email ?? 'guest@example.com';
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -35,7 +42,7 @@ class ProfilePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Ananya Sharma',
+                        userName,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
@@ -43,7 +50,7 @@ class ProfilePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'ananya@gmail.com',
+                        userEmail,
                         style: const TextStyle(
                           color: AppColors.secondaryText,
                           fontSize: 14,
@@ -82,7 +89,9 @@ class ProfilePage extends StatelessWidget {
                     _SettingsTile(
                       icon: Icons.notifications_none,
                       title: 'Reminders',
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/reminder_settings');
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.language,

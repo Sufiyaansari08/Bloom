@@ -5,7 +5,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_app_bar.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 import '../providers/daily_checkin_provider.dart';
-import '../providers/checkin_history_provider.dart';
 
 class CheckinNotesPage extends ConsumerWidget {
   const CheckinNotesPage({super.key});
@@ -85,11 +84,12 @@ class CheckinNotesPage extends ConsumerWidget {
                     const Spacer(),
                     BloomButton(
                       text: 'Done',
-                      onPressed: () {
-                        final currentState = ref.read(dailyCheckinProvider);
-                        ref.read(checkinHistoryProvider.notifier).saveCheckin(DateTime.now(), currentState);
+                      onPressed: () async {
+                        await ref.read(dailyCheckinProvider.notifier).saveToDatabase(DateTime.now());
                         ref.read(dailyCheckinProvider.notifier).clear();
-                        context.go('/home'); // Complete flow, back to home
+                        if (context.mounted) {
+                          context.go('/home'); // Complete flow, back to home
+                        }
                       },
                     ),
                   ],

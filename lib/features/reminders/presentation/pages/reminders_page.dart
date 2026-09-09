@@ -1,12 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/database/database_providers.dart';
 
-class RemindersPage extends StatelessWidget {
+class RemindersPage extends ConsumerWidget {
   const RemindersPage({super.key});
 
+  IconData _getIcon(String type) {
+    switch (type) {
+      case 'period_start':
+        return Icons.water_drop_outlined;
+      case 'fertile_window':
+        return Icons.egg_outlined;
+      case 'daily_log':
+        return Icons.edit_note;
+      case 'medication':
+        return Icons.medication_outlined;
+      default:
+        return Icons.notifications_none;
+    }
+  }
+
+  String _getTitle(String type) {
+    switch (type) {
+      case 'period_start':
+        return 'Period prediction alert';
+      case 'fertile_window':
+        return 'Fertile window reminder';
+      case 'daily_log':
+        return 'Log daily symptoms';
+      case 'medication':
+        return 'Medication / Pill reminder';
+      default:
+        return 'Health reminder';
+    }
+  }
+
+  String _getDescription(String type, int days) {
+    switch (type) {
+      case 'period_start':
+        return 'Alert $days days before period is expected to start.';
+      case 'fertile_window':
+        return 'Notification when your fertile window opens.';
+      case 'daily_log':
+        return 'Quick evening check-in for your mood and pain.';
+      case 'medication':
+        return 'Daily reminder for your wellness supplements or pills.';
+      default:
+        return 'Keep your health logs up to date.';
+    }
+  }
+
+  Color _getColor(String type) {
+    switch (type) {
+      case 'period_start':
+      case 'daily_log':
+        return AppColors.primaryPink;
+      case 'fertile_window':
+        return Colors.green;
+      case 'medication':
+        return Colors.blue;
+      default:
+        return AppColors.primaryPurple;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final remindersAsync = ref.watch(allRemindersStreamProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -26,36 +89,38 @@ class RemindersPage extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: const [
-          ReminderBox(
-            title: 'Log your symptoms',
-            description: 'Log your daily symptoms to get better insights.',
-            date: 'Today',
-            time: '08:00 AM',
-            icon: Icons.edit_note,
-            color: AppColors.primaryPink,
-          ),
-          SizedBox(height: 16),
-          ReminderBox(
-            title: 'Hydration check',
-            description: 'Time for a glass of water!',
-            date: 'Today',
-            time: '12:30 PM',
-            icon: Icons.local_drink_outlined,
-            color: Colors.blue,
-          ),
-          SizedBox(height: 16),
-          ReminderBox(
-            title: 'Period expected soon',
-            description: 'Your period is predicted to start in 2 days.',
-            date: 'Yesterday',
-            time: '09:00 AM',
-            icon: Icons.water_drop_outlined,
-            color: AppColors.primaryPink,
-          ),
-        ],
+      body: remindersAsync.when(
+        data: (reminders) {
+          final activeReminders = reminders.where((r) => r.isEnabled).toList();
+
+          if (activeReminders.isEmpty) {
+            return const Center(
+              child: Text(
+                'No active reminders configured.',
+                style: TextStyle(color: AppColors.secondaryText),
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(24.0),
+            itemCount: activeReminders.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              final r = activeReminders[index];
+              return ReminderBox(
+                title: _getTitle(r.type),
+                description: _getDescription(r.type, r.daysBefore),
+                date: 'Active',
+                time: r.timeOfDay,
+                icon: _getIcon(r.type),
+                color: _getColor(r.type),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }

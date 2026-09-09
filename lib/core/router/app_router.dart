@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
+import '../../features/onboarding/presentation/pages/name_page.dart';
 import '../../features/onboarding/presentation/pages/last_period_page.dart';
 import '../../features/onboarding/presentation/pages/period_duration_page.dart';
 import '../../features/onboarding/presentation/pages/cycle_duration_page.dart';
@@ -39,6 +40,7 @@ import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/doctor_report/presentation/pages/doctor_report_setup_page.dart';
 import '../../features/doctor_report/presentation/pages/doctor_report_result_page.dart';
 import '../../features/reminders/presentation/pages/reminders_page.dart';
+import '../../features/reminders/presentation/pages/reminder_settings_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -60,6 +62,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/signup',
       builder: (context, state) => const SignUpPage(),
+    ),
+    GoRoute(
+      path: '/onboarding/name',
+      builder: (context, state) => const NamePage(),
     ),
     GoRoute(
       path: '/onboarding/last_period',
@@ -104,6 +110,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/reminders',
       builder: (context, state) => const RemindersPage(),
+    ),
+    GoRoute(
+      path: '/reminder_settings',
+      builder: (context, state) => const ReminderSettingsPage(),
     ),
     GoRoute(
       path: '/period_logging/start',

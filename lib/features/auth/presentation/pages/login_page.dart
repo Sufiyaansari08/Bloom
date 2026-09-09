@@ -24,7 +24,7 @@ class LoginPage extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +90,7 @@ class LoginPage extends StatelessWidget {
                   context.go('/home');
                 },
               ),
-              const Spacer(),
+              const SizedBox(height: 24),
             ],
           ),
         ),

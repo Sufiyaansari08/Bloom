@@ -14,6 +14,8 @@ class ProfilePage extends ConsumerWidget {
     final userName = userAsync.value?.name ?? 'Guest';
     final userEmail = userAsync.value?.email ?? 'guest@example.com';
 
+    final userAvatar = userAsync.value?.avatarPath ?? 'assets/images/Setting_avatar.png';
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -31,8 +33,8 @@ class ProfilePage extends ConsumerWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.primaryPink, width: 2),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/images/Setting_avatar.png'),
+                      image: DecorationImage(
+                        image: AssetImage(userAvatar),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -63,23 +65,28 @@ class ProfilePage extends ConsumerWidget {
               const SizedBox(height: 32),
 
               // 2. Settings List
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
+              Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border),
+                  side: const BorderSide(color: AppColors.border),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     _SettingsTile(
                       icon: Icons.person_outline,
                       title: 'My Profile',
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/edit_profile');
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.settings_outlined,
                       title: 'App Settings',
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/app_settings');
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.lock_outline,

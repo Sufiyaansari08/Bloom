@@ -23,6 +23,8 @@ import '../../features/period_logging/presentation/pages/period_log_page.dart';
 import '../../features/home/presentation/pages/app_shell.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/profile/presentation/pages/app_settings_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
@@ -114,6 +116,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/reminder_settings',
       builder: (context, state) => const ReminderSettingsPage(),
+    ),
+    GoRoute(
+      path: '/edit_profile',
+      builder: (context, state) => const EditProfilePage(),
+    ),
+    GoRoute(
+      path: '/app_settings',
+      builder: (context, state) => const AppSettingsPage(),
     ),
     GoRoute(
       path: '/period_logging/start',

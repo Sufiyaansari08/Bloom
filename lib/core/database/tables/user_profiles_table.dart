@@ -11,6 +11,11 @@ class UserProfiles extends Table {
   IntColumn get avgCycleLength => integer().withDefault(const Constant(28))();
   IntColumn get avgPeriodLength => integer().withDefault(const Constant(5))();
   TextColumn get primaryGoal => text().nullable()();
+  TextColumn get avatarPath => text().nullable()();
+  TextColumn get phone => text().nullable()();
+  BoolColumn get periodPredictionEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get ovulationPredictionEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get fertileWindowEnabled => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();

@@ -115,6 +115,70 @@ class $UserProfilesTable extends UserProfiles
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _avatarPathMeta = const VerificationMeta(
+    'avatarPath',
+  );
+  @override
+  late final GeneratedColumn<String> avatarPath = GeneratedColumn<String>(
+    'avatar_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _periodPredictionEnabledMeta =
+      const VerificationMeta('periodPredictionEnabled');
+  @override
+  late final GeneratedColumn<bool> periodPredictionEnabled =
+      GeneratedColumn<bool>(
+        'period_prediction_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("period_prediction_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _ovulationPredictionEnabledMeta =
+      const VerificationMeta('ovulationPredictionEnabled');
+  @override
+  late final GeneratedColumn<bool> ovulationPredictionEnabled =
+      GeneratedColumn<bool>(
+        'ovulation_prediction_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("ovulation_prediction_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _fertileWindowEnabledMeta =
+      const VerificationMeta('fertileWindowEnabled');
+  @override
+  late final GeneratedColumn<bool> fertileWindowEnabled = GeneratedColumn<bool>(
+    'fertile_window_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("fertile_window_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -181,6 +245,11 @@ class $UserProfilesTable extends UserProfiles
     avgCycleLength,
     avgPeriodLength,
     primaryGoal,
+    avatarPath,
+    phone,
+    periodPredictionEnabled,
+    ovulationPredictionEnabled,
+    fertileWindowEnabled,
     createdAt,
     updatedAt,
     isSynced,
@@ -271,6 +340,45 @@ class $UserProfilesTable extends UserProfiles
         ),
       );
     }
+    if (data.containsKey('avatar_path')) {
+      context.handle(
+        _avatarPathMeta,
+        avatarPath.isAcceptableOrUnknown(data['avatar_path']!, _avatarPathMeta),
+      );
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('period_prediction_enabled')) {
+      context.handle(
+        _periodPredictionEnabledMeta,
+        periodPredictionEnabled.isAcceptableOrUnknown(
+          data['period_prediction_enabled']!,
+          _periodPredictionEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ovulation_prediction_enabled')) {
+      context.handle(
+        _ovulationPredictionEnabledMeta,
+        ovulationPredictionEnabled.isAcceptableOrUnknown(
+          data['ovulation_prediction_enabled']!,
+          _ovulationPredictionEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fertile_window_enabled')) {
+      context.handle(
+        _fertileWindowEnabledMeta,
+        fertileWindowEnabled.isAcceptableOrUnknown(
+          data['fertile_window_enabled']!,
+          _fertileWindowEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -344,6 +452,26 @@ class $UserProfilesTable extends UserProfiles
         DriftSqlType.string,
         data['${effectivePrefix}primary_goal'],
       ),
+      avatarPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}avatar_path'],
+      ),
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      periodPredictionEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}period_prediction_enabled'],
+      )!,
+      ovulationPredictionEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ovulation_prediction_enabled'],
+      )!,
+      fertileWindowEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}fertile_window_enabled'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -380,6 +508,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
   final int avgCycleLength;
   final int avgPeriodLength;
   final String? primaryGoal;
+  final String? avatarPath;
+  final String? phone;
+  final bool periodPredictionEnabled;
+  final bool ovulationPredictionEnabled;
+  final bool fertileWindowEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isSynced;
@@ -395,6 +528,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     required this.avgCycleLength,
     required this.avgPeriodLength,
     this.primaryGoal,
+    this.avatarPath,
+    this.phone,
+    required this.periodPredictionEnabled,
+    required this.ovulationPredictionEnabled,
+    required this.fertileWindowEnabled,
     required this.createdAt,
     required this.updatedAt,
     required this.isSynced,
@@ -425,6 +563,17 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     if (!nullToAbsent || primaryGoal != null) {
       map['primary_goal'] = Variable<String>(primaryGoal);
     }
+    if (!nullToAbsent || avatarPath != null) {
+      map['avatar_path'] = Variable<String>(avatarPath);
+    }
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    map['period_prediction_enabled'] = Variable<bool>(periodPredictionEnabled);
+    map['ovulation_prediction_enabled'] = Variable<bool>(
+      ovulationPredictionEnabled,
+    );
+    map['fertile_window_enabled'] = Variable<bool>(fertileWindowEnabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_synced'] = Variable<bool>(isSynced);
@@ -456,6 +605,15 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
       primaryGoal: primaryGoal == null && nullToAbsent
           ? const Value.absent()
           : Value(primaryGoal),
+      avatarPath: avatarPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avatarPath),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      periodPredictionEnabled: Value(periodPredictionEnabled),
+      ovulationPredictionEnabled: Value(ovulationPredictionEnabled),
+      fertileWindowEnabled: Value(fertileWindowEnabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       isSynced: Value(isSynced),
@@ -479,6 +637,17 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
       avgCycleLength: serializer.fromJson<int>(json['avgCycleLength']),
       avgPeriodLength: serializer.fromJson<int>(json['avgPeriodLength']),
       primaryGoal: serializer.fromJson<String?>(json['primaryGoal']),
+      avatarPath: serializer.fromJson<String?>(json['avatarPath']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      periodPredictionEnabled: serializer.fromJson<bool>(
+        json['periodPredictionEnabled'],
+      ),
+      ovulationPredictionEnabled: serializer.fromJson<bool>(
+        json['ovulationPredictionEnabled'],
+      ),
+      fertileWindowEnabled: serializer.fromJson<bool>(
+        json['fertileWindowEnabled'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
@@ -499,6 +668,15 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
       'avgCycleLength': serializer.toJson<int>(avgCycleLength),
       'avgPeriodLength': serializer.toJson<int>(avgPeriodLength),
       'primaryGoal': serializer.toJson<String?>(primaryGoal),
+      'avatarPath': serializer.toJson<String?>(avatarPath),
+      'phone': serializer.toJson<String?>(phone),
+      'periodPredictionEnabled': serializer.toJson<bool>(
+        periodPredictionEnabled,
+      ),
+      'ovulationPredictionEnabled': serializer.toJson<bool>(
+        ovulationPredictionEnabled,
+      ),
+      'fertileWindowEnabled': serializer.toJson<bool>(fertileWindowEnabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isSynced': serializer.toJson<bool>(isSynced),
@@ -517,6 +695,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     int? avgCycleLength,
     int? avgPeriodLength,
     Value<String?> primaryGoal = const Value.absent(),
+    Value<String?> avatarPath = const Value.absent(),
+    Value<String?> phone = const Value.absent(),
+    bool? periodPredictionEnabled,
+    bool? ovulationPredictionEnabled,
+    bool? fertileWindowEnabled,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
@@ -532,6 +715,13 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     avgCycleLength: avgCycleLength ?? this.avgCycleLength,
     avgPeriodLength: avgPeriodLength ?? this.avgPeriodLength,
     primaryGoal: primaryGoal.present ? primaryGoal.value : this.primaryGoal,
+    avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
+    phone: phone.present ? phone.value : this.phone,
+    periodPredictionEnabled:
+        periodPredictionEnabled ?? this.periodPredictionEnabled,
+    ovulationPredictionEnabled:
+        ovulationPredictionEnabled ?? this.ovulationPredictionEnabled,
+    fertileWindowEnabled: fertileWindowEnabled ?? this.fertileWindowEnabled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     isSynced: isSynced ?? this.isSynced,
@@ -559,6 +749,19 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
       primaryGoal: data.primaryGoal.present
           ? data.primaryGoal.value
           : this.primaryGoal,
+      avatarPath: data.avatarPath.present
+          ? data.avatarPath.value
+          : this.avatarPath,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      periodPredictionEnabled: data.periodPredictionEnabled.present
+          ? data.periodPredictionEnabled.value
+          : this.periodPredictionEnabled,
+      ovulationPredictionEnabled: data.ovulationPredictionEnabled.present
+          ? data.ovulationPredictionEnabled.value
+          : this.ovulationPredictionEnabled,
+      fertileWindowEnabled: data.fertileWindowEnabled.present
+          ? data.fertileWindowEnabled.value
+          : this.fertileWindowEnabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
@@ -579,6 +782,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
           ..write('avgCycleLength: $avgCycleLength, ')
           ..write('avgPeriodLength: $avgPeriodLength, ')
           ..write('primaryGoal: $primaryGoal, ')
+          ..write('avatarPath: $avatarPath, ')
+          ..write('phone: $phone, ')
+          ..write('periodPredictionEnabled: $periodPredictionEnabled, ')
+          ..write('ovulationPredictionEnabled: $ovulationPredictionEnabled, ')
+          ..write('fertileWindowEnabled: $fertileWindowEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
@@ -599,6 +807,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
     avgCycleLength,
     avgPeriodLength,
     primaryGoal,
+    avatarPath,
+    phone,
+    periodPredictionEnabled,
+    ovulationPredictionEnabled,
+    fertileWindowEnabled,
     createdAt,
     updatedAt,
     isSynced,
@@ -618,6 +831,11 @@ class UserProfile extends DataClass implements Insertable<UserProfile> {
           other.avgCycleLength == this.avgCycleLength &&
           other.avgPeriodLength == this.avgPeriodLength &&
           other.primaryGoal == this.primaryGoal &&
+          other.avatarPath == this.avatarPath &&
+          other.phone == this.phone &&
+          other.periodPredictionEnabled == this.periodPredictionEnabled &&
+          other.ovulationPredictionEnabled == this.ovulationPredictionEnabled &&
+          other.fertileWindowEnabled == this.fertileWindowEnabled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.isSynced == this.isSynced &&
@@ -635,6 +853,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
   final Value<int> avgCycleLength;
   final Value<int> avgPeriodLength;
   final Value<String?> primaryGoal;
+  final Value<String?> avatarPath;
+  final Value<String?> phone;
+  final Value<bool> periodPredictionEnabled;
+  final Value<bool> ovulationPredictionEnabled;
+  final Value<bool> fertileWindowEnabled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<bool> isSynced;
@@ -651,6 +874,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     this.avgCycleLength = const Value.absent(),
     this.avgPeriodLength = const Value.absent(),
     this.primaryGoal = const Value.absent(),
+    this.avatarPath = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.periodPredictionEnabled = const Value.absent(),
+    this.ovulationPredictionEnabled = const Value.absent(),
+    this.fertileWindowEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -668,6 +896,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     this.avgCycleLength = const Value.absent(),
     this.avgPeriodLength = const Value.absent(),
     this.primaryGoal = const Value.absent(),
+    this.avatarPath = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.periodPredictionEnabled = const Value.absent(),
+    this.ovulationPredictionEnabled = const Value.absent(),
+    this.fertileWindowEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
@@ -686,6 +919,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     Expression<int>? avgCycleLength,
     Expression<int>? avgPeriodLength,
     Expression<String>? primaryGoal,
+    Expression<String>? avatarPath,
+    Expression<String>? phone,
+    Expression<bool>? periodPredictionEnabled,
+    Expression<bool>? ovulationPredictionEnabled,
+    Expression<bool>? fertileWindowEnabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isSynced,
@@ -703,6 +941,14 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
       if (avgCycleLength != null) 'avg_cycle_length': avgCycleLength,
       if (avgPeriodLength != null) 'avg_period_length': avgPeriodLength,
       if (primaryGoal != null) 'primary_goal': primaryGoal,
+      if (avatarPath != null) 'avatar_path': avatarPath,
+      if (phone != null) 'phone': phone,
+      if (periodPredictionEnabled != null)
+        'period_prediction_enabled': periodPredictionEnabled,
+      if (ovulationPredictionEnabled != null)
+        'ovulation_prediction_enabled': ovulationPredictionEnabled,
+      if (fertileWindowEnabled != null)
+        'fertile_window_enabled': fertileWindowEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isSynced != null) 'is_synced': isSynced,
@@ -722,6 +968,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     Value<int>? avgCycleLength,
     Value<int>? avgPeriodLength,
     Value<String?>? primaryGoal,
+    Value<String?>? avatarPath,
+    Value<String?>? phone,
+    Value<bool>? periodPredictionEnabled,
+    Value<bool>? ovulationPredictionEnabled,
+    Value<bool>? fertileWindowEnabled,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<bool>? isSynced,
@@ -739,6 +990,13 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
       avgCycleLength: avgCycleLength ?? this.avgCycleLength,
       avgPeriodLength: avgPeriodLength ?? this.avgPeriodLength,
       primaryGoal: primaryGoal ?? this.primaryGoal,
+      avatarPath: avatarPath ?? this.avatarPath,
+      phone: phone ?? this.phone,
+      periodPredictionEnabled:
+          periodPredictionEnabled ?? this.periodPredictionEnabled,
+      ovulationPredictionEnabled:
+          ovulationPredictionEnabled ?? this.ovulationPredictionEnabled,
+      fertileWindowEnabled: fertileWindowEnabled ?? this.fertileWindowEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
@@ -780,6 +1038,27 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
     if (primaryGoal.present) {
       map['primary_goal'] = Variable<String>(primaryGoal.value);
     }
+    if (avatarPath.present) {
+      map['avatar_path'] = Variable<String>(avatarPath.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (periodPredictionEnabled.present) {
+      map['period_prediction_enabled'] = Variable<bool>(
+        periodPredictionEnabled.value,
+      );
+    }
+    if (ovulationPredictionEnabled.present) {
+      map['ovulation_prediction_enabled'] = Variable<bool>(
+        ovulationPredictionEnabled.value,
+      );
+    }
+    if (fertileWindowEnabled.present) {
+      map['fertile_window_enabled'] = Variable<bool>(
+        fertileWindowEnabled.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -811,6 +1090,11 @@ class UserProfilesCompanion extends UpdateCompanion<UserProfile> {
           ..write('avgCycleLength: $avgCycleLength, ')
           ..write('avgPeriodLength: $avgPeriodLength, ')
           ..write('primaryGoal: $primaryGoal, ')
+          ..write('avatarPath: $avatarPath, ')
+          ..write('phone: $phone, ')
+          ..write('periodPredictionEnabled: $periodPredictionEnabled, ')
+          ..write('ovulationPredictionEnabled: $ovulationPredictionEnabled, ')
+          ..write('fertileWindowEnabled: $fertileWindowEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
@@ -4247,6 +4531,11 @@ typedef $$UserProfilesTableCreateCompanionBuilder =
       Value<int> avgCycleLength,
       Value<int> avgPeriodLength,
       Value<String?> primaryGoal,
+      Value<String?> avatarPath,
+      Value<String?> phone,
+      Value<bool> periodPredictionEnabled,
+      Value<bool> ovulationPredictionEnabled,
+      Value<bool> fertileWindowEnabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<bool> isSynced,
@@ -4265,6 +4554,11 @@ typedef $$UserProfilesTableUpdateCompanionBuilder =
       Value<int> avgCycleLength,
       Value<int> avgPeriodLength,
       Value<String?> primaryGoal,
+      Value<String?> avatarPath,
+      Value<String?> phone,
+      Value<bool> periodPredictionEnabled,
+      Value<bool> ovulationPredictionEnabled,
+      Value<bool> fertileWindowEnabled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<bool> isSynced,
@@ -4328,6 +4622,31 @@ class $$UserProfilesTableFilterComposer
 
   ColumnFilters<String> get primaryGoal => $composableBuilder(
     column: $table.primaryGoal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get periodPredictionEnabled => $composableBuilder(
+    column: $table.periodPredictionEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get ovulationPredictionEnabled => $composableBuilder(
+    column: $table.ovulationPredictionEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get fertileWindowEnabled => $composableBuilder(
+    column: $table.fertileWindowEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4411,6 +4730,31 @@ class $$UserProfilesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get periodPredictionEnabled => $composableBuilder(
+    column: $table.periodPredictionEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get ovulationPredictionEnabled => $composableBuilder(
+    column: $table.ovulationPredictionEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get fertileWindowEnabled => $composableBuilder(
+    column: $table.fertileWindowEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4481,6 +4825,29 @@ class $$UserProfilesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get avatarPath => $composableBuilder(
+    column: $table.avatarPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<bool> get periodPredictionEnabled => $composableBuilder(
+    column: $table.periodPredictionEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get ovulationPredictionEnabled => $composableBuilder(
+    column: $table.ovulationPredictionEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get fertileWindowEnabled => $composableBuilder(
+    column: $table.fertileWindowEnabled,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -4535,6 +4902,11 @@ class $$UserProfilesTableTableManager
                 Value<int> avgCycleLength = const Value.absent(),
                 Value<int> avgPeriodLength = const Value.absent(),
                 Value<String?> primaryGoal = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<bool> periodPredictionEnabled = const Value.absent(),
+                Value<bool> ovulationPredictionEnabled = const Value.absent(),
+                Value<bool> fertileWindowEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -4551,6 +4923,11 @@ class $$UserProfilesTableTableManager
                 avgCycleLength: avgCycleLength,
                 avgPeriodLength: avgPeriodLength,
                 primaryGoal: primaryGoal,
+                avatarPath: avatarPath,
+                phone: phone,
+                periodPredictionEnabled: periodPredictionEnabled,
+                ovulationPredictionEnabled: ovulationPredictionEnabled,
+                fertileWindowEnabled: fertileWindowEnabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 isSynced: isSynced,
@@ -4569,6 +4946,11 @@ class $$UserProfilesTableTableManager
                 Value<int> avgCycleLength = const Value.absent(),
                 Value<int> avgPeriodLength = const Value.absent(),
                 Value<String?> primaryGoal = const Value.absent(),
+                Value<String?> avatarPath = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<bool> periodPredictionEnabled = const Value.absent(),
+                Value<bool> ovulationPredictionEnabled = const Value.absent(),
+                Value<bool> fertileWindowEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
@@ -4585,6 +4967,11 @@ class $$UserProfilesTableTableManager
                 avgCycleLength: avgCycleLength,
                 avgPeriodLength: avgPeriodLength,
                 primaryGoal: primaryGoal,
+                avatarPath: avatarPath,
+                phone: phone,
+                periodPredictionEnabled: periodPredictionEnabled,
+                ovulationPredictionEnabled: ovulationPredictionEnabled,
+                fertileWindowEnabled: fertileWindowEnabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 isSynced: isSynced,

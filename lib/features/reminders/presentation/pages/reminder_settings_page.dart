@@ -165,12 +165,16 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: AppColors.lightPurple,
+                                  color: (quietHoursReminder?.isEnabled ?? false)
+                                      ? AppColors.lightPurple
+                                      : AppColors.background,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.bedtime_outlined,
-                                  color: AppColors.primaryPurple,
+                                  color: (quietHoursReminder?.isEnabled ?? false)
+                                      ? AppColors.primaryPurple
+                                      : AppColors.secondaryText,
                                   size: 20,
                                 ),
                               ),

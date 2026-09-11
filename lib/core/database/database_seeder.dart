@@ -106,10 +106,12 @@ class DatabaseSeeder {
 
     // 3. Seed Reminders
     final reminders = [
-      {'type': 'period_start', 'time': '09:00', 'days': 2},
-      {'type': 'fertile_window', 'time': '09:00', 'days': 1},
-      {'type': 'daily_log', 'time': '21:00', 'days': 0},
-      {'type': 'medication', 'time': '08:00', 'days': 0},
+      {'type': 'period_start', 'time': '09:00', 'days': 2, 'enabled': true},
+      {'type': 'ovulation', 'time': '09:00', 'days': 1, 'enabled': true},
+      {'type': 'fertile_window', 'time': '09:00', 'days': 1, 'enabled': true},
+      {'type': 'daily_log', 'time': '21:00', 'days': 0, 'enabled': true},
+      {'type': 'cycle_summary', 'time': '10:00', 'days': 0, 'enabled': true},
+      {'type': 'quiet_hours', 'time': '22:00 - 07:00', 'days': 0, 'enabled': false},
     ];
 
     for (final r in reminders) {
@@ -120,7 +122,7 @@ class DatabaseSeeder {
           type: r['type'] as String,
           timeOfDay: r['time'] as String,
           daysBefore: Value(r['days'] as int),
-          isEnabled: const Value(true),
+          isEnabled: Value(r['enabled'] as bool),
         ),
       );
     }

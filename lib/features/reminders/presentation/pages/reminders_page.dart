@@ -406,7 +406,7 @@ class RemindersPage extends ConsumerWidget {
         break;
 
       case 'ovulation':
-        icon = Icons.egg_outlined;
+        icon = Icons.auto_awesome;
         color = const Color(0xFFF4C059);
         title = 'Ovulation reminder';
         if (daysUntilOvulation <= 0) {

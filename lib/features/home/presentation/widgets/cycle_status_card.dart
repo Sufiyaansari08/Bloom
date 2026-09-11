@@ -48,7 +48,11 @@ class CycleStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Period in $daysUntilPeriod days',
+                  daysUntilPeriod < 0
+                      ? 'Period is ${daysUntilPeriod.abs()} ${daysUntilPeriod.abs() == 1 ? "day" : "days"} late'
+                      : (daysUntilPeriod == 0
+                          ? 'Period expected today'
+                          : 'Period in $daysUntilPeriod ${daysUntilPeriod == 1 ? "day" : "days"}'),
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

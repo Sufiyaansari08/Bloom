@@ -5,79 +5,76 @@ import '../../../checkin/presentation/providers/daily_checkin_provider.dart';
 class DailySummaryCard extends StatelessWidget {
   final DateTime date;
   final bool isPeriodDay;
+  final bool isLoggedPeriodDay;
+  final String? loggedFlow;
   final bool isFertileDay;
+  final int? cycleDay;
+  final bool isCycleStart;
+  final bool isPeriodLate;
+  final int daysLate;
+  final DateTime? expectedPeriodDate;
   final DailyCheckinState? checkinData;
+  final VoidCallback? onSetAsPeriodStart;
+  final VoidCallback? onChangePeriodDate;
+  final VoidCallback? onRemovePeriod;
+  final VoidCallback? onLogPeriodForDay;
 
   const DailySummaryCard({
     super.key,
     required this.date,
     required this.isPeriodDay,
+    this.isLoggedPeriodDay = false,
+    this.loggedFlow,
     required this.isFertileDay,
+    this.cycleDay,
+    this.isCycleStart = false,
+    this.isPeriodLate = false,
+    this.daysLate = 0,
+    this.expectedPeriodDate,
     this.checkinData,
+    this.onSetAsPeriodStart,
+    this.onChangePeriodDate,
+    this.onRemovePeriod,
+    this.onLogPeriodForDay,
   });
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> cards = [];
 
-    // 1. Cycle Status Card (Period or Fertile)
-    if (isPeriodDay || isFertileDay) {
-      String statusTitle = isPeriodDay ? 'Period Day' : 'Fertile Window';
-      String statusSubtitle = isPeriodDay ? 'Predicted period day' : 'High chance of pregnancy';
-      Color iconColor = isPeriodDay ? AppColors.primaryPink : Colors.green;
-      IconData icon = isPeriodDay ? Icons.water_drop : Icons.favorite_border;
+    // 1. Cycle Status Card (Period, Fertile, Late, or Cycle Day)
+    if (isPeriodDay || isFertileDay || isPeriodLate || cycleDay != null) {
+      String statusTitle;
+      String statusSubtitle;
+      Color iconColor;
+      IconData icon;
 
-      cards.add(
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: iconColor),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusTitle,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      statusSubtitle,
-                      style: const TextStyle(
-                        color: AppColors.secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+      if (isPeriodLate && !isLoggedPeriodDay) {
+        statusTitle = 'Period is $daysLate ${daysLate == 1 ? "day" : "days"} late';
+        statusSubtitle = expectedPeriodDate != null
+            ? 'Expected on ${expectedPeriodDate!.day}/${expectedPeriodDate!.month}. Period not arrived yet?'
+            : 'Your period is overdue. Has it started?';
+        iconColor = AppColors.primaryPink;
+        icon = Icons.hourglass_top_rounded;
+      } else if (isPeriodDay) {
+        statusTitle = cycleDay != null ? 'Period Day $cycleDay' : 'Period Day';
+        statusSubtitle = isLoggedPeriodDay
+            ? 'Flow logged: ${loggedFlow ?? "Period logged"}'
+            : 'Predicted period day';
+        iconColor = AppColors.primaryPink;
+        icon = Icons.water_drop;
+      } else if (isFertileDay) {
+        statusTitle = cycleDay != null ? 'Fertile Window • Day $cycleDay' : 'Fertile Window';
+        statusSubtitle = 'High chance of pregnancy';
+        iconColor = Colors.green;
+        icon = Icons.spa_outlined;
+      } else {
+        statusTitle = 'Cycle Day $cycleDay';
+        statusSubtitle = 'Day $cycleDay of your menstrual cycle';
+        iconColor = AppColors.primaryPurple;
+        icon = Icons.calendar_month_outlined;
+      }
 
-    // 2. Check-in Data Card
-    if (checkinData != null) {
-      if (cards.isNotEmpty) cards.add(const SizedBox(height: 12));
       cards.add(
         Container(
           padding: const EdgeInsets.all(20),
@@ -92,22 +89,168 @@ class DailySummaryCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                      color: iconColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.mood, color: AppColors.primaryPurple, size: 20),
+                    child: Icon(icon, color: iconColor),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      'Feeling ${checkinData!.mood ?? "Okay"}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          statusTitle,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          statusSubtitle,
+                          style: const TextStyle(
+                            color: AppColors.secondaryText,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+              if (isPeriodDay || (isPeriodLate && !isLoggedPeriodDay)) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (isPeriodDay && onChangePeriodDate != null)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: onChangePeriodDate,
+                          icon: const Icon(Icons.edit_calendar_outlined, size: 15),
+                          label: const Text(
+                            'Change Date',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primaryPink,
+                            side: BorderSide(color: AppColors.primaryPink.withValues(alpha: 0.4)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    if (isPeriodDay && onChangePeriodDate != null && (onRemovePeriod != null || !isLoggedPeriodDay))
+                      const SizedBox(width: 8),
+                    if (isPeriodDay && onRemovePeriod != null && isLoggedPeriodDay)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: onRemovePeriod,
+                          icon: const Icon(Icons.delete_outline, size: 15),
+                          label: const Text(
+                            'Remove',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade400,
+                            side: BorderSide(color: Colors.red.shade200),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    if (!isLoggedPeriodDay && (onLogPeriodForDay != null || onSetAsPeriodStart != null))
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: onLogPeriodForDay ?? onSetAsPeriodStart,
+                          icon: const Icon(Icons.water_drop, size: 15),
+                          label: Text(
+                            isPeriodLate ? 'Log Period for Today' : (cycleDay != null ? 'Log Day $cycleDay' : 'Log Period'),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryPink,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 2. Check-in Data Card
+    final hasCheckinData = checkinData != null &&
+        (checkinData!.mood != null ||
+            checkinData!.symptoms.isNotEmpty ||
+            checkinData!.sleep != null ||
+            checkinData!.waterIntake != null ||
+            checkinData!.activity != null ||
+            checkinData!.notes.isNotEmpty);
+
+    if (hasCheckinData) {
+      if (cards.isNotEmpty) cards.add(const SizedBox(height: 12));
+      cards.add(
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (checkinData!.mood != null)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.mood, color: AppColors.primaryPurple, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Feeling ${checkinData!.mood}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_circle_outline, color: AppColors.primaryPurple, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Daily Check-in',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.text),
+                      ),
+                    ),
+                  ],
+                ),
               if (checkinData!.symptoms.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Wrap(
@@ -219,7 +362,7 @@ class DailySummaryCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Tap the + button to log symptoms',
+                      'Tap below to mark period or log check-in',
                       style: TextStyle(
                         color: AppColors.secondaryText,
                         fontSize: 14,
@@ -234,8 +377,69 @@ class DailySummaryCard extends StatelessWidget {
       );
     }
 
+    // 4. Quick Action to set/move Period Start or log flow
+    if (!isPeriodDay && (onLogPeriodForDay != null || onSetAsPeriodStart != null)) {
+      cards.add(const SizedBox(height: 12));
+      cards.add(
+        InkWell(
+          onTap: (cycleDay != null && !isCycleStart) ? onLogPeriodForDay : onSetAsPeriodStart,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.primaryPink.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPink.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.water_drop, color: AppColors.primaryPink, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (cycleDay != null && !isCycleStart)
+                            ? 'Log Period (Day $cycleDay)'
+                            : 'Set as Period Start (Day 1)',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        (cycleDay != null && !isCycleStart)
+                            ? 'Record bleeding/flow for Day $cycleDay'
+                            : 'Mark this date as the start of your cycle',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.add_circle_outline, color: AppColors.primaryPink, size: 20),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: cards,
     );
   }
 }
+

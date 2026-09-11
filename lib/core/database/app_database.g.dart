@@ -463,31 +463,31 @@ class $UserProfilesTable extends UserProfiles
       periodPredictionEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}period_prediction_enabled'],
-      )!,
+      ) ?? true,
       ovulationPredictionEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}ovulation_prediction_enabled'],
-      )!,
+      ) ?? true,
       fertileWindowEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}fertile_window_enabled'],
-      )!,
+      ) ?? true,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 
@@ -1381,23 +1381,23 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
       isPredicted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_predicted'],
-      )!,
+      ) ?? false,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 
@@ -2206,19 +2206,19 @@ class $DailyLogsTable extends DailyLogs
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 
@@ -2988,15 +2988,15 @@ class $DailySymptomsTable extends DailySymptoms
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 
@@ -3519,23 +3519,23 @@ class $RemindersTable extends Reminders
       isEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_enabled'],
-      )!,
+      ) ?? true,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 
@@ -4135,15 +4135,15 @@ class $AiInsightsTable extends AiInsights
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      )!,
+      ) ?? DateTime.now(),
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      )!,
+      ) ?? false,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      )!,
+      ) ?? false,
     );
   }
 

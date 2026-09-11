@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import 'package:drift/drift.dart' as drift;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/database/app_database.dart';
 import '../providers/calendar_provider.dart';
 import '../widgets/bloom_calendar.dart';
 import '../widgets/daily_summary_card.dart';
@@ -16,11 +19,49 @@ class CalendarPage extends ConsumerWidget {
     final state = ref.watch(calendarProvider);
     final notifier = ref.read(calendarProvider.notifier);
     final userAsync = ref.watch(userProfileStreamProvider);
+    final allDailyLogsAsync = ref.watch(allDailyLogsStreamProvider);
 
     final user = userAsync.value;
+    final allDailyLogs = allDailyLogsAsync.value ?? [];
     final isPeriodPredictionEnabled = user?.periodPredictionEnabled ?? true;
     final isFertileWindowEnabled = user?.fertileWindowEnabled ?? true;
     final isOvulationEnabled = user?.ovulationPredictionEnabled ?? true;
+
+    final selectedDayClean = DateTime(state.selectedDay.year, state.selectedDay.month, state.selectedDay.day);
+    final selectedDayLog = allDailyLogs.where((l) {
+      final d = DateTime(l.date.year, l.date.month, l.date.day);
+      return d.isAtSameMomentAs(selectedDayClean);
+    }).firstOrNull;
+    final isLoggedPeriodDay = selectedDayLog?.flowIntensity != null && selectedDayLog!.flowIntensity != 'None';
+    final loggedFlow = selectedDayLog?.flowIntensity;
+
+    final currentCycleAsync = ref.watch(currentCycleStreamProvider);
+    final allCyclesAsync = ref.watch(allCyclesStreamProvider);
+    final currentCycle = currentCycleAsync.value;
+    final allCycles = allCyclesAsync.value ?? [];
+
+    DateTime? referenceCycleStart;
+    if (currentCycle != null) {
+      referenceCycleStart = currentCycle.startDate;
+    } else if (allCycles.isNotEmpty) {
+      referenceCycleStart = allCycles.first.startDate;
+    }
+
+    int? cycleDayForSelected;
+    bool isCycleStartForSelected = false;
+
+    if (referenceCycleStart != null) {
+      final cleanCycleStart = DateTime(
+        referenceCycleStart.year,
+        referenceCycleStart.month,
+        referenceCycleStart.day,
+      );
+      final daysDiff = selectedDayClean.difference(cleanCycleStart).inDays;
+      if (daysDiff >= 0) {
+        cycleDayForSelected = daysDiff + 1;
+        isCycleStartForSelected = (daysDiff == 0);
+      }
+    }
 
     final isPeriodDay = state.periodDays.any((d) => isSameDay(d, state.selectedDay)) ||
         (isPeriodPredictionEnabled && state.expectedPeriodDays.any((d) => isSameDay(d, state.selectedDay)));
@@ -135,8 +176,19 @@ class CalendarPage extends ConsumerWidget {
               DailySummaryCard(
                 date: state.selectedDay,
                 isPeriodDay: isPeriodDay,
+                isLoggedPeriodDay: isLoggedPeriodDay,
+                loggedFlow: loggedFlow,
                 isFertileDay: isFertileDay,
+                cycleDay: cycleDayForSelected,
+                isCycleStart: isCycleStartForSelected,
+                isPeriodLate: state.isPeriodLate,
+                daysLate: state.daysLate,
+                expectedPeriodDate: state.nextPeriodStartDate,
                 checkinData: ref.watch(dailyCheckinForSelectedDayProvider).value,
+                onLogPeriodForDay: () => _handleLogPeriodForDay(context, ref, state.selectedDay, cycleDayForSelected),
+                onSetAsPeriodStart: () => _handleSetAsPeriodStart(context, ref, state.selectedDay),
+                onChangePeriodDate: () => _handleChangePeriodDate(context, ref, state.selectedDay),
+                onRemovePeriod: () => _handleRemovePeriod(context, ref, state.selectedDay),
               ),
               const SizedBox(height: 32),
               Text(
@@ -166,12 +218,18 @@ class CalendarPage extends ConsumerWidget {
                                 color: AppColors.primaryPink.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.water_drop, color: AppColors.primaryPink, size: 20),
+                              child: Icon(
+                                state.isPeriodLate ? Icons.hourglass_top_rounded : Icons.water_drop,
+                                color: AppColors.primaryPink,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Text(
-                                'Period expected ${state.nextPeriodStartDate!.day}-${(state.nextPeriodEndDate ?? state.nextPeriodStartDate!.add(const Duration(days: 4))).day} ${_getMonthName(state.nextPeriodStartDate!.month)}',
+                                state.isPeriodLate
+                                    ? 'Period is ${state.daysLate} ${state.daysLate == 1 ? "day" : "days"} late (expected ${state.nextPeriodStartDate!.day} ${_getMonthName(state.nextPeriodStartDate!.month)})'
+                                    : 'Period expected ${state.nextPeriodStartDate!.day}-${(state.nextPeriodEndDate ?? state.nextPeriodStartDate!.add(const Duration(days: 4))).day} ${_getMonthName(state.nextPeriodStartDate!.month)}',
                                 style: const TextStyle(
                                   color: AppColors.text,
                                   fontWeight: FontWeight.w600,
@@ -192,7 +250,7 @@ class CalendarPage extends ConsumerWidget {
                                 color: Colors.green.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.favorite_border, color: Colors.green, size: 20),
+                              child: const Icon(Icons.spa_outlined, color: Colors.green, size: 20),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -292,4 +350,203 @@ class CalendarPage extends ConsumerWidget {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[month - 1];
   }
+
+  Future<void> _handleLogPeriodForDay(BuildContext context, WidgetRef ref, DateTime date, int? cycleDay) async {
+    final cleanDate = DateTime(date.year, date.month, date.day);
+    final user = ref.read(userProfileStreamProvider).value;
+    final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+    final currentCycle = ref.read(currentCycleStreamProvider).value;
+
+    final selectedFlow = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Log Flow for ${cycleDay != null ? "Day $cycleDay" : DateFormat("MMM d").format(cleanDate)}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.text),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20, color: AppColors.secondaryText),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...['Spotting', 'Light', 'Medium', 'Heavy', 'Very heavy'].map((flow) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(vertical: 2),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPink.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.water_drop, color: AppColors.primaryPink, size: 18),
+              ),
+              title: Text(flow, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.text)),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+              onTap: () => Navigator.of(ctx).pop(flow),
+            )),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedFlow == null) return;
+
+    final logId = '${cleanDate.millisecondsSinceEpoch}_log';
+    await dailyLogRepo.upsertDailyLog(
+      DailyLogsCompanion.insert(
+        id: logId,
+        userId: user?.id ?? 'default_user',
+        cycleId: drift.Value(currentCycle?.id),
+        date: cleanDate,
+        flowIntensity: drift.Value(selectedFlow),
+      ),
+    );
+
+    if (context.mounted) {
+      final label = cycleDay != null ? 'Day $cycleDay ($selectedFlow)' : '${DateFormat('MMM d').format(cleanDate)} ($selectedFlow)';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Period flow logged for $label'),
+          backgroundColor: AppColors.primaryPink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleSetAsPeriodStart(BuildContext context, WidgetRef ref, DateTime date) async {
+    final cleanDate = DateTime(date.year, date.month, date.day);
+    final user = ref.read(userProfileStreamProvider).value;
+    final cycleRepo = ref.read(cycleRepositoryProvider);
+    final currentCycle = ref.read(currentCycleStreamProvider).value;
+
+    if (currentCycle != null) {
+      await cycleRepo.updateCycleStartDate(currentCycle.id, cleanDate);
+    } else if (user != null) {
+      final cycleId = DateTime.now().millisecondsSinceEpoch.toString();
+      await cycleRepo.insertCycle(
+        CyclesCompanion.insert(
+          id: cycleId,
+          userId: user.id,
+          startDate: cleanDate,
+          cycleLength: drift.Value(user.avgCycleLength),
+          periodLength: drift.Value(user.avgPeriodLength),
+        ),
+      );
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Period start set to ${DateFormat('EEEE, MMM d').format(cleanDate)} (Cycle Day 1)'),
+          backgroundColor: AppColors.primaryPink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleChangePeriodDate(BuildContext context, WidgetRef ref, DateTime oldDate) async {
+    final cleanOld = DateTime(oldDate.year, oldDate.month, oldDate.day);
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: cleanOld,
+      firstDate: now.subtract(const Duration(days: 90)),
+      lastDate: now.add(const Duration(days: 1)),
+      helpText: 'Select correct period date',
+      confirmText: 'Move to this date',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryPink,
+              onPrimary: Colors.white,
+              onSurface: AppColors.text,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final cleanNew = DateTime(picked.year, picked.month, picked.day);
+      final cycleRepo = ref.read(cycleRepositoryProvider);
+      final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+      final currentCycle = ref.read(currentCycleStreamProvider).value;
+
+      await dailyLogRepo.movePeriodLog(cleanOld, cleanNew);
+
+      if (currentCycle != null) {
+        await cycleRepo.updateCycleStartDate(currentCycle.id, cleanNew);
+      }
+
+      ref.read(calendarProvider.notifier).onDaySelected(cleanNew, cleanNew);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Period date moved from ${DateFormat('MMM d').format(cleanOld)} to ${DateFormat('MMM d').format(cleanNew)}'),
+            backgroundColor: AppColors.primaryPink,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRemovePeriod(BuildContext context, WidgetRef ref, DateTime date) async {
+    final cleanDate = DateTime(date.year, date.month, date.day);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Period Log?'),
+        content: Text('Do you want to remove the period log for ${DateFormat('EEEE, MMM d').format(cleanDate)}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+      await dailyLogRepo.removePeriodFlowForDate(cleanDate);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Period removed for ${DateFormat('MMM d').format(cleanDate)}'),
+            backgroundColor: AppColors.text,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
 }
+

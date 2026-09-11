@@ -1,10 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 
-class PeriodStartPage extends StatelessWidget {
+class PeriodStartPage extends StatefulWidget {
   const PeriodStartPage({super.key});
+
+  @override
+  State<PeriodStartPage> createState() => _PeriodStartPageState();
+}
+
+class _PeriodStartPageState extends State<PeriodStartPage> {
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+  }
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.day;
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: now.subtract(const Duration(days: 90)),
+      lastDate: now.add(const Duration(days: 1)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryPink,
+              onPrimary: Colors.white,
+              onSurface: AppColors.text,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = DateTime(picked.year, picked.month, picked.day);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +73,7 @@ class PeriodStartPage extends StatelessWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -35,10 +85,10 @@ class PeriodStartPage extends StatelessWidget {
                   color: AppColors.text,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
               Container(
-                height: 200,
-                width: 200,
+                height: 160,
+                width: 160,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                 ),
@@ -48,10 +98,10 @@ class PeriodStartPage extends StatelessWidget {
                   fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(height: 40),
-              const Text(
-                'Did your period start today?',
-                style: TextStyle(
+              const SizedBox(height: 24),
+              Text(
+                _isToday ? 'Did your period start today?' : 'Period start date',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.text,
@@ -59,26 +109,62 @@ class PeriodStartPage extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'This will be recorded as\nCycle Day 1',
-                style: TextStyle(
-                  fontSize: 16,
+              Text(
+                'This will be recorded as Cycle Day 1',
+                style: const TextStyle(
+                  fontSize: 14,
                   color: AppColors.secondaryText,
                 ),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Date picker selector card
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightPink,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.primaryPink.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month, color: AppColors.primaryPink, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isToday
+                            ? 'Today, ${DateFormat('MMM d').format(_selectedDate)}'
+                            : DateFormat('EEEE, MMM d').format(_selectedDate),
+                        style: const TextStyle(
+                          color: AppColors.primaryPink,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.edit_outlined, color: AppColors.primaryPink, size: 16),
+                    ],
+                  ),
+                ),
               ),
               const Spacer(),
               BloomButton(
                 text: 'Yes, it started',
                 backgroundColor: AppColors.primaryPink,
                 onPressed: () {
-                  context.push('/period_logging/log');
+                  context.push(
+                    '/period_logging/log',
+                    extra: {'startDate': _selectedDate},
+                  );
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 54,
                 child: OutlinedButton(
                   onPressed: () {
                     context.pop();
@@ -99,7 +185,7 @@ class PeriodStartPage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -107,3 +193,4 @@ class PeriodStartPage extends StatelessWidget {
     );
   }
 }
+

@@ -54,4 +54,23 @@ class CycleRepository {
       ),
     );
   }
+
+  Future<void> updateCycleStartDate(String cycleId, DateTime newStartDate) async {
+    final cleanDate = DateTime(newStartDate.year, newStartDate.month, newStartDate.day);
+    await (_db.update(_db.cycles)..where((t) => t.id.equals(cycleId))).write(
+      CyclesCompanion(
+        startDate: Value(cleanDate),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> deleteCycle(String cycleId) async {
+    await (_db.update(_db.cycles)..where((t) => t.id.equals(cycleId))).write(
+      CyclesCompanion(
+        isDeleted: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
 }

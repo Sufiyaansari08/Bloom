@@ -38,6 +38,24 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(userProfiles, userProfiles.fertileWindowEnabled);
         }
       },
+      beforeOpen: (details) async {
+        try {
+          await customStatement('PRAGMA foreign_keys = ON');
+          await customStatement('UPDATE user_profiles SET period_prediction_enabled = 1 WHERE period_prediction_enabled IS NULL');
+          await customStatement('UPDATE user_profiles SET ovulation_prediction_enabled = 1 WHERE ovulation_prediction_enabled IS NULL');
+          await customStatement('UPDATE user_profiles SET fertile_window_enabled = 1 WHERE fertile_window_enabled IS NULL');
+          await customStatement('UPDATE user_profiles SET is_synced = 0 WHERE is_synced IS NULL');
+          await customStatement('UPDATE user_profiles SET is_deleted = 0 WHERE is_deleted IS NULL');
+          await customStatement('UPDATE cycles SET is_predicted = 0 WHERE is_predicted IS NULL');
+          await customStatement('UPDATE cycles SET is_synced = 0 WHERE is_synced IS NULL');
+          await customStatement('UPDATE cycles SET is_deleted = 0 WHERE is_deleted IS NULL');
+          await customStatement('UPDATE daily_logs SET is_synced = 0 WHERE is_synced IS NULL');
+          await customStatement('UPDATE daily_logs SET is_deleted = 0 WHERE is_deleted IS NULL');
+          await customStatement('UPDATE reminders SET is_enabled = 1 WHERE is_enabled IS NULL');
+          await customStatement('UPDATE reminders SET is_synced = 0 WHERE is_synced IS NULL');
+          await customStatement('UPDATE reminders SET is_deleted = 0 WHERE is_deleted IS NULL');
+        } catch (_) {}
+      },
     );
   }
 

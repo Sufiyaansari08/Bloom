@@ -227,7 +227,7 @@ class AppSettingsPage extends ConsumerWidget {
 
                         // Ovulation prediction switch
                         _buildSwitchTile(
-                          icon: Icons.egg_outlined,
+                          icon: Icons.auto_awesome,
                           title: 'Ovulation prediction',
                           subtitle: 'Estimate estimated ovulation day',
                           value: user.ovulationPredictionEnabled,

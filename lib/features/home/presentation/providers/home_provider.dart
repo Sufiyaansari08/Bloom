@@ -12,6 +12,7 @@ class HomeState {
   final int symptomsLogged;
   final int painLevel;
   final String mood;
+  final bool isPeriodLate;
 
   HomeState({
     this.userName = 'Guest',
@@ -22,6 +23,7 @@ class HomeState {
     this.symptomsLogged = 2,
     this.painLevel = 2,
     this.mood = 'Good',
+    this.isPeriodLate = false,
   });
 }
 
@@ -34,26 +36,42 @@ final homeProvider = Provider<HomeState>((ref) {
 
   if (currentCycle != null) {
     final now = DateTime.now();
-    final start = currentCycle.startDate;
-    final diff = now.difference(start).inDays + 1;
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(
+      currentCycle.startDate.year,
+      currentCycle.startDate.month,
+      currentCycle.startDate.day,
+    );
+    final diff = today.difference(start).inDays + 1;
     final cycleDay = diff > 0 ? diff : 1;
     final avgCycleLen = userAsync.value?.avgCycleLength ?? 29;
     final daysUntil = avgCycleLen - cycleDay;
 
     final nextPeriodStart = start.add(Duration(days: avgCycleLen));
-    final nextPeriodEnd = nextPeriodStart.add(Duration(days: (userAsync.value?.avgPeriodLength ?? 5) - 1));
-    final periodRange = '${DateFormat('MMM d').format(nextPeriodStart)} - ${DateFormat('MMM d').format(nextPeriodEnd)}';
+    final nextPeriodEnd = nextPeriodStart.add(
+      Duration(days: (userAsync.value?.avgPeriodLength ?? 5) - 1),
+    );
+    final periodRange =
+        '${DateFormat('MMM d').format(nextPeriodStart)} - ${DateFormat('MMM d').format(nextPeriodEnd)}';
 
     final fertileStart = start.add(Duration(days: avgCycleLen - 16));
     final fertileEnd = start.add(Duration(days: avgCycleLen - 11));
-    final fertileRange = '${DateFormat('MMM d').format(fertileStart)} - ${DateFormat('MMM d').format(fertileEnd)}';
+    final fertileRange =
+        '${DateFormat('MMM d').format(fertileStart)} - ${DateFormat('MMM d').format(fertileEnd)}';
 
     final logsAsync = ref.watch(allDailyLogsStreamProvider);
     final logs = logsAsync.value ?? [];
-    
+
     // Find today's log if any
     final nowTime = DateTime.now();
-    final todayLog = logs.where((log) => log.date.year == nowTime.year && log.date.month == nowTime.month && log.date.day == nowTime.day).firstOrNull;
+    final todayLog = logs
+        .where(
+          (log) =>
+              log.date.year == nowTime.year &&
+              log.date.month == nowTime.month &&
+              log.date.day == nowTime.day,
+        )
+        .firstOrNull;
 
     int symptomsLoggedCount = 0;
     if (todayLog != null) {
@@ -64,7 +82,8 @@ final homeProvider = Provider<HomeState>((ref) {
     return HomeState(
       userName: userName,
       cycleDay: cycleDay,
-      daysUntilPeriod: daysUntil > 0 ? daysUntil : 0,
+      daysUntilPeriod: daysUntil,
+      isPeriodLate: daysUntil < 0,
       periodDateRange: periodRange,
       fertileWindowRange: fertileRange,
       symptomsLogged: symptomsLoggedCount,
@@ -76,6 +95,7 @@ final homeProvider = Provider<HomeState>((ref) {
   return HomeState(userName: userName);
 });
 
-final todaySymptomsStreamProvider = StreamProvider.family<List<DailySymptom>, String>((ref, logId) {
-  return ref.watch(symptomRepositoryProvider).watchSymptomsForLog(logId);
-});
+final todaySymptomsStreamProvider =
+    StreamProvider.family<List<DailySymptom>, String>((ref, logId) {
+      return ref.watch(symptomRepositoryProvider).watchSymptomsForLog(logId);
+    });

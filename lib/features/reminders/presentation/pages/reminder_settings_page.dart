@@ -94,7 +94,7 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
 
                         // 2. Ovulation reminder
                         _buildReminderTile(
-                          icon: Icons.egg_outlined,
+                          icon: Icons.auto_awesome,
                           title: 'Ovulation reminder',
                           subtitle: 'Alert on estimated ovulation day',
                           reminder: ovulationReminder,

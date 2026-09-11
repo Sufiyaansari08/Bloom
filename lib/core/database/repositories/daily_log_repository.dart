@@ -74,4 +74,50 @@ class DailyLogRepository {
   Future<void> upsertDailyLog(DailyLogsCompanion log) async {
     await _db.into(_db.dailyLogs).insertOnConflictUpdate(log);
   }
+
+  Future<void> removePeriodFlowForDate(DateTime date) async {
+    final cleanDate = _stripTime(date);
+    final existing = await getLogForDate(cleanDate);
+    if (existing != null) {
+      await (_db.update(_db.dailyLogs)..where((t) => t.id.equals(existing.id))).write(
+        DailyLogsCompanion(
+          flowIntensity: const Value(null),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    }
+  }
+
+  Future<void> movePeriodLog(DateTime oldDate, DateTime newDate) async {
+    final cleanOld = _stripTime(oldDate);
+    final cleanNew = _stripTime(newDate);
+    final existingOld = await getLogForDate(cleanOld);
+    if (existingOld != null) {
+      final existingNew = await getLogForDate(cleanNew);
+      if (existingNew != null) {
+        // Transfer flow to existing new date log
+        await (_db.update(_db.dailyLogs)..where((t) => t.id.equals(existingNew.id))).write(
+          DailyLogsCompanion(
+            flowIntensity: Value(existingOld.flowIntensity),
+            painLevel: existingOld.painLevel != null ? Value(existingOld.painLevel) : const Value.absent(),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+      } else {
+        // Create new log for new date with old flow data
+        await upsertDailyLog(
+          DailyLogsCompanion.insert(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: existingOld.userId,
+            cycleId: Value(existingOld.cycleId),
+            date: cleanNew,
+            flowIntensity: Value(existingOld.flowIntensity),
+            painLevel: Value(existingOld.painLevel),
+          ),
+        );
+      }
+      // Clear flow from old date
+      await removePeriodFlowForDate(cleanOld);
+    }
+  }
 }

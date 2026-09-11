@@ -11,6 +11,7 @@ import '../providers/period_logging_provider.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:intl/intl.dart';
 
 class PeriodLogPage extends ConsumerWidget {
   const PeriodLogPage({super.key});
@@ -38,6 +39,12 @@ class PeriodLogPage extends ConsumerWidget {
     final painLevel = state.painLevel;
     final selectedSymptoms = state.symptoms;
 
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final rawStartDate = extra?['startDate'] as DateTime? ?? DateTime.now();
+    final startDate = DateTime(rawStartDate.year, rawStartDate.month, rawStartDate.day);
+    final now = DateTime.now();
+    final isToday = startDate.year == now.year && startDate.month == now.month && startDate.day == now.day;
+
     return Scaffold(
       appBar: const BloomAppBar(progress: 1.0), // Can adjust if part of a longer flow
       body: SafeArea(
@@ -47,7 +54,7 @@ class PeriodLogPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Log for Day 1',
+                isToday ? 'Log for Day 1' : 'Log for ${DateFormat('MMM d').format(startDate)}',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontSize: 24,
                     ),
@@ -160,31 +167,35 @@ class PeriodLogPage extends ConsumerWidget {
 
                     String cycleId;
                     
-                    // If there's an ongoing cycle and it's not starting today, close it.
-                    // If it started today, we can just log into it.
-                    // For simplicity in a prototype, if they are logging "Day 1" (which PeriodStartPage implies), we create a new cycle.
-                    if (currentCycle != null && currentCycle.startDate.difference(DateTime.now()).inDays.abs() > 1) {
-                      // Close previous cycle
-                      await cycleRepo.completeCycle(
-                        currentCycle.id, 
-                        DateTime.now().subtract(const Duration(days: 1)), 
-                        DateTime.now().difference(currentCycle.startDate).inDays, 
-                        user.avgPeriodLength,
-                      );
-                      
-                      // Create new cycle
-                      cycleId = DateTime.now().millisecondsSinceEpoch.toString();
-                      await cycleRepo.insertCycle(
-                        CyclesCompanion.insert(
-                          id: cycleId,
-                          userId: user.id,
-                          startDate: DateTime.now(),
-                          cycleLength: drift.Value(user.avgCycleLength),
-                          periodLength: drift.Value(user.avgPeriodLength),
-                        )
-                      );
-                    } else if (currentCycle != null) {
-                      cycleId = currentCycle.id;
+                    // If there's an ongoing cycle and startDate is close (e.g. correcting start date), update it.
+                    // If startDate is > 15 days after currentCycle.startDate, complete previous cycle and start a new one.
+                    if (currentCycle != null) {
+                      final dayDiff = startDate.difference(currentCycle.startDate).inDays;
+                      if (dayDiff > 15) {
+                        // Complete previous cycle
+                        await cycleRepo.completeCycle(
+                          currentCycle.id, 
+                          startDate.subtract(const Duration(days: 1)), 
+                          dayDiff, 
+                          user.avgPeriodLength,
+                        );
+                        
+                        // Create new cycle
+                        cycleId = DateTime.now().millisecondsSinceEpoch.toString();
+                        await cycleRepo.insertCycle(
+                          CyclesCompanion.insert(
+                            id: cycleId,
+                            userId: user.id,
+                            startDate: startDate,
+                            cycleLength: drift.Value(user.avgCycleLength),
+                            periodLength: drift.Value(user.avgPeriodLength),
+                          )
+                        );
+                      } else {
+                        // Adjust existing current cycle start date to the selected start date
+                        await cycleRepo.updateCycleStartDate(currentCycle.id, startDate);
+                        cycleId = currentCycle.id;
+                      }
                     } else {
                       // No current cycle at all
                       cycleId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -192,7 +203,7 @@ class PeriodLogPage extends ConsumerWidget {
                         CyclesCompanion.insert(
                           id: cycleId,
                           userId: user.id,
-                          startDate: DateTime.now(),
+                          startDate: startDate,
                           cycleLength: drift.Value(user.avgCycleLength),
                           periodLength: drift.Value(user.avgPeriodLength),
                         )
@@ -200,14 +211,14 @@ class PeriodLogPage extends ConsumerWidget {
                     }
 
                     final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
-                    final logId = DateTime.now().millisecondsSinceEpoch.toString();
+                    final logId = '${startDate.millisecondsSinceEpoch}_log';
 
                     await dailyLogRepo.upsertDailyLog(
                       DailyLogsCompanion.insert(
                         id: logId,
                         userId: user.id,
                         cycleId: drift.Value(cycleId),
-                        date: DateTime.now(),
+                        date: startDate,
                         flowIntensity: drift.Value(selectedFlow),
                         painLevel: drift.Value(painLevel),
                       )

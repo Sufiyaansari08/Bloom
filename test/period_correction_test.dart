@@ -1,8 +1,13 @@
 import 'package:bloom/core/database/app_database.dart';
+import 'package:bloom/core/database/database_providers.dart';
+import 'package:bloom/core/database/database_seeder.dart';
 import 'package:bloom/core/database/repositories/cycle_repository.dart';
 import 'package:bloom/core/database/repositories/daily_log_repository.dart';
+import 'package:bloom/features/calendar/presentation/providers/calendar_provider.dart';
+import 'package:bloom/features/checkin/presentation/providers/daily_checkin_provider.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -211,4 +216,238 @@ void main() {
       expect(calendarCardTitle, 'Period is 4 days late');
     },
   );
+
+  test('Late period arrival (Sep 12, expected Sep 8) completes old cycle and starts new cycle', () async {
+    // 1. Initial state: cycle started on Aug 10
+    final initialCycle = CyclesCompanion.insert(
+      id: 'cycle_aug10',
+      userId: 'user_1',
+      startDate: DateTime(2026, 8, 10),
+      cycleLength: const drift.Value(29),
+      periodLength: const drift.Value(5),
+    );
+    await cycleRepo.insertCycle(initialCycle);
+
+    // 2. Today is Sep 12 (period was expected on Sep 8, now 4 days late)
+    final arrivalDate = DateTime(2026, 9, 12);
+    final curCycle = await cycleRepo.getCurrentCycle();
+    expect(curCycle, isNotNull);
+
+    final dayDiff = arrivalDate.difference(curCycle!.startDate).inDays;
+    expect(dayDiff, 33); // 33 days since Aug 10
+
+    // Complete overdue cycle
+    await cycleRepo.completeCycle(
+      curCycle.id,
+      arrivalDate.subtract(const Duration(days: 1)),
+      dayDiff,
+      5,
+    );
+
+    // Start new cycle on arrival date
+    final newCycle = CyclesCompanion.insert(
+      id: 'cycle_sep12',
+      userId: 'user_1',
+      startDate: arrivalDate,
+      cycleLength: const drift.Value(29),
+      periodLength: const drift.Value(5),
+    );
+    await cycleRepo.insertCycle(newCycle);
+
+    // Verify current active cycle is now Sep 12
+    final activeCycle = await cycleRepo.getCurrentCycle();
+    expect(activeCycle?.id, 'cycle_sep12');
+    expect(activeCycle?.startDate, DateTime(2026, 9, 12));
+
+    // Verify old cycle is closed
+    final allCycles = await cycleRepo.getAllCycles();
+    final oldCycle = allCycles.firstWhere((c) => c.id == 'cycle_aug10');
+    expect(oldCycle.endDate, DateTime(2026, 9, 11));
+    expect(oldCycle.cycleLength, 33);
+  });
+
+  test('Home Card headline and dot labels: Ongoing Period vs Period in X Days', () {
+    // Helper simulating Home Card logic
+    String getHeadline({required int cycleDay, required bool isPeriodOngoing, required int daysUntil, required bool isPeriodLate}) {
+      if (isPeriodLate) {
+        return 'Period is ${daysUntil.abs()} ${daysUntil.abs() == 1 ? "day" : "days"} late';
+      } else if (isPeriodOngoing) {
+        return 'Period Day $cycleDay';
+      } else if (daysUntil == 0) {
+        return 'Period expected today';
+      } else {
+        return 'Period in $daysUntil ${daysUntil == 1 ? "day" : "days"}';
+      }
+    }
+
+    String getDotLabel({required bool isPeriodOngoing, required bool isPeriodLate, required String range}) {
+      if (isPeriodOngoing) {
+        return 'Upcoming Period: $range';
+      } else if (isPeriodLate) {
+        return 'Period: $range (Expected)';
+      } else {
+        return 'Period: $range';
+      }
+    }
+
+    // Day 1 of Period (Ongoing)
+    expect(getHeadline(cycleDay: 1, isPeriodOngoing: true, daysUntil: 28, isPeriodLate: false), 'Period Day 1');
+    expect(getDotLabel(isPeriodOngoing: true, isPeriodLate: false, range: 'Oct 11 - Oct 15'), 'Upcoming Period: Oct 11 - Oct 15');
+
+    // Day 3 of Period (Ongoing)
+    expect(getHeadline(cycleDay: 3, isPeriodOngoing: true, daysUntil: 26, isPeriodLate: false), 'Period Day 3');
+    expect(getDotLabel(isPeriodOngoing: true, isPeriodLate: false, range: 'Oct 11 - Oct 15'), 'Upcoming Period: Oct 11 - Oct 15');
+
+    // Day 6 (Period Stopped, Follicular Phase)
+    expect(getHeadline(cycleDay: 6, isPeriodOngoing: false, daysUntil: 23, isPeriodLate: false), 'Period in 23 days');
+    expect(getDotLabel(isPeriodOngoing: false, isPeriodLate: false, range: 'Oct 11 - Oct 15'), 'Period: Oct 11 - Oct 15');
+
+    // Overdue state (Day 34, 5 days late)
+    expect(getHeadline(cycleDay: 34, isPeriodOngoing: false, daysUntil: -5, isPeriodLate: true), 'Period is 5 days late');
+    expect(getDotLabel(isPeriodOngoing: false, isPeriodLate: true, range: 'Sep 7 - Sep 11'), 'Period: Sep 7 - Sep 11 (Expected)');
+  });
+
+  test('Sleep dropdown strings parse correctly into numeric hours', () {
+    double? parseSleep(String? sleepStr) {
+      if (sleepStr == null || sleepStr.isEmpty || sleepStr == 'Select') return null;
+      final rangeMatch = RegExp(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+      if (rangeMatch != null) {
+        final low = double.tryParse(rangeMatch.group(1)!) ?? 0;
+        final high = double.tryParse(rangeMatch.group(2)!) ?? 0;
+        return (low + high) / 2.0;
+      }
+      final lessMatch = RegExp(r'<\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+      if (lessMatch != null) {
+        final val = double.tryParse(lessMatch.group(1)!) ?? 5;
+        return val - 0.5;
+      }
+      final greaterMatch = RegExp(r'>\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+      if (greaterMatch != null) {
+        final val = double.tryParse(greaterMatch.group(1)!) ?? 8;
+        return val + 0.5;
+      }
+      final hmMatch = RegExp(r'(\d+)\s*h(?:\s*(\d+)\s*m)?').firstMatch(sleepStr);
+      if (hmMatch != null) {
+        final hours = double.tryParse(hmMatch.group(1) ?? '0') ?? 0;
+        final mins = double.tryParse(hmMatch.group(2) ?? '0') ?? 0;
+        return hours + (mins / 60.0);
+      }
+      return double.tryParse(sleepStr.replaceAll(RegExp(r'[^\d.]'), ''));
+    }
+
+    // Every single dropdown option from CheckinLifestylePage:
+    expect(parseSleep('Select'), isNull);
+    expect(parseSleep('< 5 h'), 4.5);
+    expect(parseSleep('5 - 6 h'), 5.5);
+    expect(parseSleep('6 h 30 m'), 6.5);
+    expect(parseSleep('7 - 8 h'), 7.5);
+    expect(parseSleep('8 h 00 m'), 8.0);
+    expect(parseSleep('> 8 h'), 8.5);
+  });
+
+  test('Daily checkin sleep shows immediately in calendar daily summary provider', () async {
+    final testDb = AppDatabase(NativeDatabase.memory());
+    await DatabaseSeeder.seedInitialData(testDb);
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(testDb),
+      ],
+    );
+
+    final today = DateTime(2026, 9, 12);
+
+    final notifier = container.read(dailyCheckinProvider.notifier);
+    notifier.setMood('Energetic');
+    notifier.setLifestyle(sleep: '7 - 8 h', waterIntake: '2.5 L', activity: 'Active');
+    await notifier.saveToDatabase(today);
+
+    container.read(calendarProvider.notifier).onDaySelected(today, today);
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final checkinState = container.read(dailyCheckinForSelectedDayProvider);
+    expect(checkinState.value, isNotNull);
+    expect(checkinState.value?.sleep, '7.5 hrs');
+    expect(checkinState.value?.mood, 'Energetic');
+    expect(checkinState.value?.waterIntake, '2.5 L');
+
+    await testDb.close();
+  });
+
+  test('Preserves flow and adds sleep when both period and checkin are logged on same date', () async {
+    final testDb = AppDatabase(NativeDatabase.memory());
+    await DatabaseSeeder.seedInitialData(testDb);
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(testDb),
+      ],
+    );
+
+    final today = DateTime(2026, 9, 12);
+
+    // 1. Period flow logged first
+    final repo = container.read(dailyLogRepositoryProvider);
+    await repo.upsertDailyLog(
+      DailyLogsCompanion.insert(
+        id: 'sep12_period_log',
+        userId: 'default_user',
+        date: today,
+        flowIntensity: const drift.Value('Medium'),
+      ),
+    );
+
+    // 2. Checkin logged second
+    final notifier = container.read(dailyCheckinProvider.notifier);
+    notifier.setMood('Good');
+    notifier.setLifestyle(sleep: '6 h 30 m');
+    await notifier.saveToDatabase(today);
+
+    container.read(calendarProvider.notifier).onDaySelected(today, today);
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    final checkinState = container.read(dailyCheckinForSelectedDayProvider);
+    expect(checkinState.value, isNotNull);
+    expect(checkinState.value?.sleep, '6.5 hrs');
+    expect(checkinState.value?.mood, 'Good');
+
+    final updatedLog = await repo.getLogForDate(today);
+    expect(updatedLog?.flowIntensity, 'Medium');
+    expect(updatedLog?.sleepHours, 6.5);
+
+    await testDb.close();
+  });
+
+  test('Diagnose fertile window and reminders for seeded database state', () async {
+    final testDb = AppDatabase(NativeDatabase.memory());
+    await DatabaseSeeder.seedInitialData(testDb);
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(testDb),
+      ],
+    );
+
+    final calState = container.read(calendarProvider);
+    print('calendarState fertileDays: ${calState.fertileDays}');
+    print('calendarState ovulationDay: ${calState.ovulationDay}');
+    print('calendarState nextPeriodStartDate: ${calState.nextPeriodStartDate}');
+    print('calendarState isPeriodLate: ${calState.isPeriodLate}, daysLate: ${calState.daysLate}');
+
+    final today = DateTime.now();
+    final upcoming = calState.fertileDays.where((d) => !d.isBefore(DateTime(today.year, today.month, today.day).subtract(const Duration(days: 5)))).toList();
+    print('upcoming fertile days count: ${upcoming.length}');
+    if (upcoming.isNotEmpty) {
+      print('upcoming.first: ${upcoming.first}');
+      print('upcoming.last: ${upcoming.last}');
+    }
+
+    final curCycle = await testDb.select(testDb.cycles).get();
+    print('All cycles in DB:');
+    for (final c in curCycle) {
+      print('Cycle: id=${c.id}, start=${c.startDate}, end=${c.endDate}');
+    }
+
+    await testDb.close();
+  });
 }

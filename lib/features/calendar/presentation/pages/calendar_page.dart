@@ -28,12 +28,13 @@ class CalendarPage extends ConsumerWidget {
     final isOvulationEnabled = user?.ovulationPredictionEnabled ?? true;
 
     final selectedDayClean = DateTime(state.selectedDay.year, state.selectedDay.month, state.selectedDay.day);
-    final selectedDayLog = allDailyLogs.where((l) {
+    final selectedDayLogs = allDailyLogs.where((l) {
       final d = DateTime(l.date.year, l.date.month, l.date.day);
       return d.isAtSameMomentAs(selectedDayClean);
-    }).firstOrNull;
-    final isLoggedPeriodDay = selectedDayLog?.flowIntensity != null && selectedDayLog!.flowIntensity != 'None';
-    final loggedFlow = selectedDayLog?.flowIntensity;
+    }).toList();
+    final logWithFlow = selectedDayLogs.where((l) => l.flowIntensity != null && l.flowIntensity != 'None').firstOrNull;
+    final isLoggedPeriodDay = logWithFlow != null;
+    final loggedFlow = logWithFlow?.flowIntensity;
 
     final currentCycleAsync = ref.watch(currentCycleStreamProvider);
     final allCyclesAsync = ref.watch(allCyclesStreamProvider);
@@ -355,7 +356,9 @@ class CalendarPage extends ConsumerWidget {
     final cleanDate = DateTime(date.year, date.month, date.day);
     final user = ref.read(userProfileStreamProvider).value;
     final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+    final cycleRepo = ref.read(cycleRepositoryProvider);
     final currentCycle = ref.read(currentCycleStreamProvider).value;
+    final isPeriodLate = ref.read(calendarProvider).isPeriodLate;
 
     final selectedFlow = await showModalBottomSheet<String>(
       context: context,
@@ -404,13 +407,55 @@ class CalendarPage extends ConsumerWidget {
 
     if (selectedFlow == null) return;
 
-    final logId = '${cleanDate.millisecondsSinceEpoch}_log';
+    String? cycleId = currentCycle?.id;
+
+    // If period was late or this is >=15 days after current cycle start, this is Day 1 of a NEW cycle!
+    if (currentCycle != null) {
+      final dayDiff = cleanDate.difference(currentCycle.startDate).inDays;
+      if (isPeriodLate || dayDiff >= 15) {
+        // Complete the previous overdue cycle
+        await cycleRepo.completeCycle(
+          currentCycle.id,
+          cleanDate.subtract(const Duration(days: 1)),
+          dayDiff > 0 ? dayDiff : (user?.avgCycleLength ?? 29),
+          currentCycle.periodLength ?? user?.avgPeriodLength ?? 5,
+        );
+
+        // Start new cycle with cleanDate as Day 1
+        final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
+        await cycleRepo.insertCycle(
+          CyclesCompanion.insert(
+            id: newCycleId,
+            userId: user?.id ?? 'default_user',
+            startDate: cleanDate,
+            cycleLength: drift.Value(user?.avgCycleLength ?? 29),
+            periodLength: drift.Value(user?.avgPeriodLength ?? 5),
+          ),
+        );
+        cycleId = newCycleId;
+      }
+    } else {
+      final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
+      await cycleRepo.insertCycle(
+        CyclesCompanion.insert(
+          id: newCycleId,
+          userId: user?.id ?? 'default_user',
+          startDate: cleanDate,
+          cycleLength: drift.Value(user?.avgCycleLength ?? 29),
+          periodLength: drift.Value(user?.avgPeriodLength ?? 5),
+        ),
+      );
+      cycleId = newCycleId;
+    }
+
+    final existingLog = await dailyLogRepo.getLogForDate(cleanDate);
+    final logId = existingLog?.id ?? '${cleanDate.millisecondsSinceEpoch}_log';
     await dailyLogRepo.upsertDailyLog(
-      DailyLogsCompanion.insert(
-        id: logId,
-        userId: user?.id ?? 'default_user',
-        cycleId: drift.Value(currentCycle?.id),
-        date: cleanDate,
+      DailyLogsCompanion(
+        id: drift.Value(logId),
+        userId: drift.Value(user?.id ?? existingLog?.userId ?? 'default_user'),
+        cycleId: drift.Value(cycleId),
+        date: drift.Value(cleanDate),
         flowIntensity: drift.Value(selectedFlow),
       ),
     );
@@ -433,9 +478,30 @@ class CalendarPage extends ConsumerWidget {
     final user = ref.read(userProfileStreamProvider).value;
     final cycleRepo = ref.read(cycleRepositoryProvider);
     final currentCycle = ref.read(currentCycleStreamProvider).value;
+    final isPeriodLate = ref.read(calendarProvider).isPeriodLate;
 
     if (currentCycle != null) {
-      await cycleRepo.updateCycleStartDate(currentCycle.id, cleanDate);
+      final dayDiff = cleanDate.difference(currentCycle.startDate).inDays;
+      if (isPeriodLate || dayDiff >= 15) {
+        await cycleRepo.completeCycle(
+          currentCycle.id,
+          cleanDate.subtract(const Duration(days: 1)),
+          dayDiff > 0 ? dayDiff : (user?.avgCycleLength ?? 29),
+          currentCycle.periodLength ?? user?.avgPeriodLength ?? 5,
+        );
+        final cycleId = DateTime.now().millisecondsSinceEpoch.toString();
+        await cycleRepo.insertCycle(
+          CyclesCompanion.insert(
+            id: cycleId,
+            userId: user?.id ?? 'default_user',
+            startDate: cleanDate,
+            cycleLength: drift.Value(user?.avgCycleLength ?? 29),
+            periodLength: drift.Value(user?.avgPeriodLength ?? 5),
+          ),
+        );
+      } else {
+        await cycleRepo.updateCycleStartDate(currentCycle.id, cleanDate);
+      }
     } else if (user != null) {
       final cycleId = DateTime.now().millisecondsSinceEpoch.toString();
       await cycleRepo.insertCycle(

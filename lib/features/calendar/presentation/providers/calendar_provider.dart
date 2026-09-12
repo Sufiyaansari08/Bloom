@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../checkin/presentation/providers/daily_checkin_provider.dart';
 
@@ -82,10 +83,11 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
       if (next.value != null) {
         final logs = next.value!;
         final periodDays = logs
-            .where((log) => log.flowIntensity != null)
+            .where((log) => log.flowIntensity != null && log.flowIntensity != 'None')
             .map((log) => log.date)
             .toList();
         state = state.copyWith(periodDays: periodDays);
+        _recomputeCyclePredictions();
       }
     }, fireImmediately: true);
 
@@ -332,45 +334,59 @@ final dailyCheckinForSelectedDayProvider =
 
       return logsAsync.when(
         data: (logs) {
-          final log = logs
+          final dayLogs = logs
               .where(
                 (l) =>
                     l.date.year == selectedDay.year &&
                     l.date.month == selectedDay.month &&
                     l.date.day == selectedDay.day,
               )
-              .firstOrNull;
-          if (log == null) return const AsyncValue.data(null);
+              .toList();
 
-          final symptomsAsync = ref.watch(symptomsForLogStreamProvider(log.id));
+          if (dayLogs.isEmpty) return const AsyncValue.data(null);
 
-          return symptomsAsync.when(
-            data: (symptoms) {
-              final hasAnyCheckin =
-                  log.mood != null ||
-                  log.sleepHours != null ||
-                  log.waterIntake != null ||
-                  log.activityLevel != null ||
-                  (log.notes != null && log.notes!.isNotEmpty) ||
-                  symptoms.isNotEmpty;
+          final mood = dayLogs.map((l) => l.mood).where((m) => m != null).firstOrNull;
+          final sleepHours = dayLogs.map((l) => l.sleepHours).where((s) => s != null).firstOrNull;
+          final waterIntake = dayLogs.map((l) => l.waterIntake).where((w) => w != null).firstOrNull;
+          final activity = dayLogs.map((l) => l.activityLevel).where((a) => a != null).firstOrNull;
+          final notes = dayLogs.map((l) => l.notes).where((n) => n != null && n.isNotEmpty).firstOrNull ?? '';
 
-              if (!hasAnyCheckin) {
-                return const AsyncValue.data(null);
+          final allSymptoms = <String>[];
+          for (final l in dayLogs) {
+            final symptomsAsync = ref.watch(symptomsForLogStreamProvider(l.id));
+            final symptoms = symptomsAsync.value ?? const <DailySymptom>[];
+            for (final s in symptoms) {
+              if (!allSymptoms.contains(s.symptomName)) {
+                allSymptoms.add(s.symptomName);
               }
+            }
+          }
 
-              final state = DailyCheckinState(
-                mood: log.mood,
-                sleep: log.sleepHours != null ? '${log.sleepHours} hrs' : null,
-                waterIntake: log.waterIntake,
-                activity: log.activityLevel,
-                notes: log.notes ?? '',
-                symptoms: symptoms.map((s) => s.symptomName).toList(),
-              );
-              return AsyncValue.data(state);
-            },
-            loading: () => const AsyncValue.loading(),
-            error: (err, stack) => AsyncValue.error(err, stack),
+          final hasAnyCheckin =
+              mood != null ||
+              sleepHours != null ||
+              waterIntake != null ||
+              activity != null ||
+              notes.isNotEmpty ||
+              allSymptoms.isNotEmpty;
+
+          if (!hasAnyCheckin) {
+            return const AsyncValue.data(null);
+          }
+
+          final state = DailyCheckinState(
+            mood: mood,
+            sleep: sleepHours != null
+                ? (sleepHours == sleepHours.roundToDouble()
+                    ? '${sleepHours.toInt()} hrs'
+                    : '${sleepHours.toStringAsFixed(1)} hrs')
+                : null,
+            waterIntake: waterIntake,
+            activity: activity,
+            notes: notes,
+            symptoms: allSymptoms,
           );
+          return AsyncValue.data(state);
         },
         loading: () => const AsyncValue.loading(),
         error: (err, stack) => AsyncValue.error(err, stack),

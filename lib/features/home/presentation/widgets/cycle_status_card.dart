@@ -6,6 +6,9 @@ class CycleStatusCard extends StatelessWidget {
   final int daysUntilPeriod;
   final String periodDateRange;
   final String fertileWindowRange;
+  final bool isPeriodLate;
+  final bool isPeriodOngoing;
+  final int periodDay;
 
   const CycleStatusCard({
     super.key,
@@ -13,6 +16,9 @@ class CycleStatusCard extends StatelessWidget {
     required this.daysUntilPeriod,
     required this.periodDateRange,
     required this.fertileWindowRange,
+    this.isPeriodLate = false,
+    this.isPeriodOngoing = false,
+    this.periodDay = 1,
   });
 
   @override
@@ -48,11 +54,13 @@ class CycleStatusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  daysUntilPeriod < 0
+                  isPeriodLate
                       ? 'Period is ${daysUntilPeriod.abs()} ${daysUntilPeriod.abs() == 1 ? "day" : "days"} late'
-                      : (daysUntilPeriod == 0
-                          ? 'Period expected today'
-                          : 'Period in $daysUntilPeriod ${daysUntilPeriod == 1 ? "day" : "days"}'),
+                      : (isPeriodOngoing
+                          ? 'Period Day $periodDay'
+                          : (daysUntilPeriod == 0
+                              ? 'Period expected today'
+                              : 'Period in $daysUntilPeriod ${daysUntilPeriod == 1 ? "day" : "days"}')),
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -71,7 +79,11 @@ class CycleStatusCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Period: $periodDateRange',
+                      isPeriodOngoing
+                          ? 'Upcoming Period: $periodDateRange'
+                          : (isPeriodLate
+                              ? 'Period: $periodDateRange (Expected)'
+                              : 'Period: $periodDateRange'),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.text.withValues(alpha: 0.75),

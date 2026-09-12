@@ -113,14 +113,40 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
   }
 
   double? _parseSleep(String? sleepStr) {
-    if (sleepStr == null) return null;
-    final match = RegExp(r'(\d+)h(?:\s*(\d+)m)?').firstMatch(sleepStr);
-    if (match != null) {
-      final hours = double.tryParse(match.group(1) ?? '0') ?? 0;
-      final mins = double.tryParse(match.group(2) ?? '0') ?? 0;
-      return hours + (mins / 60.0);
+    if (sleepStr == null || sleepStr.isEmpty || sleepStr == 'Select') return null;
+
+    // Check for range like "5 - 6 h" or "7 - 8 h"
+    final rangeMatch = RegExp(r'(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+    if (rangeMatch != null) {
+      final low = double.tryParse(rangeMatch.group(1)!) ?? 0;
+      final high = double.tryParse(rangeMatch.group(2)!) ?? 0;
+      return (low + high) / 2.0; // e.g. 5 - 6 h -> 5.5, 7 - 8 h -> 7.5
     }
-    return double.tryParse(sleepStr);
+
+    // Check for "< 5 h" or "<5h"
+    final lessMatch = RegExp(r'<\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+    if (lessMatch != null) {
+      final val = double.tryParse(lessMatch.group(1)!) ?? 5;
+      return val - 0.5; // e.g. < 5 h -> 4.5
+    }
+
+    // Check for "> 8 h" or ">8h"
+    final greaterMatch = RegExp(r'>\s*(\d+(?:\.\d+)?)\s*h?').firstMatch(sleepStr);
+    if (greaterMatch != null) {
+      final val = double.tryParse(greaterMatch.group(1)!) ?? 8;
+      return val + 0.5; // e.g. > 8 h -> 8.5
+    }
+
+    // Check for "6 h 30 m", "8 h 00 m", "6h 30m"
+    final hmMatch = RegExp(r'(\d+)\s*h(?:\s*(\d+)\s*m)?').firstMatch(sleepStr);
+    if (hmMatch != null) {
+      final hours = double.tryParse(hmMatch.group(1) ?? '0') ?? 0;
+      final mins = double.tryParse(hmMatch.group(2) ?? '0') ?? 0;
+      return hours + (mins / 60.0); // e.g. 6 h 30 m -> 6.5, 8 h 00 m -> 8.0
+    }
+
+    // Direct double fallback
+    return double.tryParse(sleepStr.replaceAll(RegExp(r'[^\d.]'), ''));
   }
 
   Future<void> saveToDatabase(DateTime date) async {
@@ -142,8 +168,10 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
       DailyLogsCompanion(
         id: Value(logId),
         userId: Value(userId),
-        cycleId: Value(currentCycle?.id),
+        cycleId: Value(currentCycle?.id ?? existingLog?.cycleId),
         date: Value(cleanDate),
+        flowIntensity: existingLog?.flowIntensity != null ? Value(existingLog!.flowIntensity) : const Value.absent(),
+        painLevel: existingLog?.painLevel != null ? Value(existingLog!.painLevel) : const Value.absent(),
         mood: Value(state.mood),
         sleepHours: Value(sleepHours),
         waterIntake: Value(state.waterIntake),

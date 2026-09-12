@@ -51,6 +51,9 @@ class HomePage extends ConsumerWidget {
                 daysUntilPeriod: state.daysUntilPeriod,
                 periodDateRange: state.periodDateRange,
                 fertileWindowRange: state.fertileWindowRange,
+                isPeriodLate: state.isPeriodLate,
+                isPeriodOngoing: state.isPeriodOngoing,
+                periodDay: state.periodDay,
               ),
               const SizedBox(height: 32),
               const BodyTodayCard(

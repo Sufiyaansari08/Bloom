@@ -8,11 +8,15 @@ import '../../../../core/database/app_database.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 import '../../../calendar/presentation/providers/calendar_provider.dart';
 
+final dismissedRemindersProvider =
+    StateProvider<Set<String>>((ref) => <String>{});
+
 class RemindersPage extends ConsumerWidget {
   const RemindersPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dismissedIds = ref.watch(dismissedRemindersProvider);
     final remindersAsync = ref.watch(allRemindersStreamProvider);
     final userAsync = ref.watch(userProfileStreamProvider);
     final dailyLogsAsync = ref.watch(allDailyLogsStreamProvider);
@@ -168,8 +172,12 @@ class RemindersPage extends ConsumerWidget {
           final daysUntilFertile = fertileStart != null ? fertileStart.difference(today).inDays : 999;
           final isFertileActiveToday = fertileStart != null && fertileEnd != null && !today.isBefore(fertileStart) && !today.isAfter(fertileEnd);
 
-          // Filter only reminders that are strictly due/necessary
+          // Filter only reminders that are strictly due/necessary and not dismissed
           final dueReminders = enabledReminders.where((r) {
+            final reminderKey =
+                '${r.type}_${today.year}_${today.month}_${today.day}';
+            if (dismissedIds.contains(reminderKey)) return false;
+
             return _isReminderDue(
               r: r,
               daysUntilPeriod: daysUntilPeriod,
@@ -235,6 +243,29 @@ class RemindersPage extends ConsumerWidget {
                             text: 'Reminder Settings',
                             onPressed: () => context.push('/reminder_settings'),
                           ),
+                          if (dismissedIds.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            TextButton.icon(
+                              onPressed: () {
+                                ref
+                                    .read(dismissedRemindersProvider.notifier)
+                                    .state = {};
+                              },
+                              icon: const Icon(
+                                Icons.restore,
+                                size: 16,
+                                color: AppColors.primaryPurple,
+                              ),
+                              label: const Text(
+                                'Restore dismissed alerts',
+                                style: TextStyle(
+                                  color: AppColors.primaryPurple,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -245,7 +276,11 @@ class RemindersPage extends ConsumerWidget {
           }
 
           final items = dueReminders.map((r) {
-            final reminderDate = (r.updatedAt.year == now.year && r.updatedAt.month == now.month && r.updatedAt.day == now.day)
+            final reminderKey =
+                '${r.type}_${today.year}_${today.month}_${today.day}';
+            final reminderDate = (r.updatedAt.year == now.year &&
+                    r.updatedAt.month == now.month &&
+                    r.updatedAt.day == now.day)
                 ? now
                 : (r.updatedAt.isAfter(now) ? now : r.updatedAt);
             final dateStr = _formatNotificationDate(reminderDate, now);
@@ -265,6 +300,7 @@ class RemindersPage extends ConsumerWidget {
               calendarState.daysLate,
               fertileStart,
               hasCheckedInToday,
+              reminderKey,
             );
           }).toList();
 
@@ -291,7 +327,62 @@ class RemindersPage extends ConsumerWidget {
                 ...items.map((item) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 14.0),
-                    child: _ReminderCardWidget(item: item),
+                    child: Dismissible(
+                      key: ValueKey(item.id),
+                      direction: DismissDirection.startToEnd,
+                      background: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF5350),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Dismiss',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      onDismissed: (direction) {
+                        ref
+                            .read(dismissedRemindersProvider.notifier)
+                            .update((state) => {...state, item.id});
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${item.title} dismissed'),
+                            duration: const Duration(seconds: 4),
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              textColor: Colors.amberAccent,
+                              onPressed: () {
+                                ref
+                                    .read(dismissedRemindersProvider.notifier)
+                                    .update(
+                                      (state) => state
+                                          .where((id) => id != item.id)
+                                          .toSet(),
+                                    );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      child: _ReminderCardWidget(item: item),
+                    ),
                   );
                 }),
               ],
@@ -415,6 +506,7 @@ class RemindersPage extends ConsumerWidget {
     int daysLate,
     DateTime? fertileStart,
     bool hasCheckedInToday,
+    String id,
   ) {
     IconData icon;
     Color color;
@@ -438,6 +530,8 @@ class RemindersPage extends ConsumerWidget {
         } else {
           description = 'You may get your period in $daysUntilPeriod days.';
         }
+        actionLabel = 'View Calendar';
+        onAction = () => context.go('/calendar');
         break;
 
       case 'ovulation':
@@ -451,6 +545,8 @@ class RemindersPage extends ConsumerWidget {
         } else {
           description = 'You may have your ovulation in $daysUntilOvulation days.';
         }
+        actionLabel = 'View Calendar';
+        onAction = () => context.go('/calendar');
         break;
 
       case 'fertile_window':
@@ -464,6 +560,8 @@ class RemindersPage extends ConsumerWidget {
         } else {
           description = 'You are currently in your fertile window today.';
         }
+        actionLabel = 'View Calendar';
+        onAction = () => context.go('/calendar');
         break;
 
       case 'daily_log':
@@ -473,7 +571,7 @@ class RemindersPage extends ConsumerWidget {
           title = 'Daily check-in completed';
           description = "You've already logged your health data for today. Great job keeping your cycle tracking up to date!";
           isCompleted = true;
-          actionLabel = 'View / Edit Check-in';
+          actionLabel = 'Edit Check-in';
           onAction = () => context.push('/checkin/mood');
         } else {
           icon = Icons.edit_note;
@@ -498,6 +596,7 @@ class RemindersPage extends ConsumerWidget {
     }
 
     return _ReminderDisplayItem(
+      id: id,
       title: title,
       description: description,
       date: exactDate,
@@ -545,7 +644,7 @@ class _ReminderCardWidget extends StatefulWidget {
 }
 
 class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
-  bool _isExpanded = false;
+  bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -727,6 +826,7 @@ class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
 }
 
 class _ReminderDisplayItem {
+  final String id;
   final String title;
   final String description;
   final String date;
@@ -738,6 +838,7 @@ class _ReminderDisplayItem {
   final VoidCallback? onAction;
 
   const _ReminderDisplayItem({
+    required this.id,
     required this.title,
     required this.description,
     required this.date,

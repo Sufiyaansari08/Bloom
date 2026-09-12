@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/notification_service.dart';
 
 class ReminderSettingsPage extends ConsumerStatefulWidget {
   const ReminderSettingsPage({super.key});
@@ -28,6 +29,7 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       _initialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(reminderRepositoryProvider).ensureStandardReminders(user.id);
+        NotificationService.instance.requestPermissions();
       });
     }
 
@@ -165,14 +167,16 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                  color: (quietHoursReminder?.isEnabled ?? false)
+                                  color:
+                                      (quietHoursReminder?.isEnabled ?? false)
                                       ? AppColors.lightPurple
                                       : AppColors.background,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
                                   Icons.bedtime_outlined,
-                                  color: (quietHoursReminder?.isEnabled ?? false)
+                                  color:
+                                      (quietHoursReminder?.isEnabled ?? false)
                                       ? AppColors.primaryPurple
                                       : AppColors.secondaryText,
                                   size: 20,
@@ -279,6 +283,136 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                     ),
                   ),
 
+                  const SizedBox(height: 28),
+
+                  const Text(
+                    'Phone Notification Center',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.secondaryText,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Section 3: Phone Notification Center card with Test Alert
+                  Material(
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightPurple,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_active_outlined,
+                                  color: AppColors.primaryPurple,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Device Status Bar Alerts',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.text,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Receive alerts in your phone notification center even when Bloom is closed',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.secondaryText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primaryPurple,
+                                side: const BorderSide(
+                                  color: AppColors.primaryPurple,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final granted = await NotificationService
+                                    .instance
+                                    .requestPermissions();
+                                if (!context.mounted) return;
+                                if (granted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'System notification permissions are active!',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      backgroundColor: Color(0xFF2E7D32),
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                } else {
+                                  _showPermissionGuideDialog(context);
+                                }
+                              },
+                              icon: const Icon(Icons.security, size: 16),
+                              label: const Text(
+                                'Check Permissions',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
                 ],
               ),
@@ -360,7 +494,9 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.only(left: 54),
-              child: (reminder.type == 'daily_log' || reminder.type == 'cycle_summary')
+              child:
+                  (reminder.type == 'daily_log' ||
+                      reminder.type == 'cycle_summary')
                   ? InkWell(
                       onTap: () => _editSingleReminderTime(context, reminder),
                       borderRadius: BorderRadius.circular(10),
@@ -373,7 +509,9 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                           color: AppColors.lightPurple,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: AppColors.primaryPurple.withValues(alpha: 0.2),
+                            color: AppColors.primaryPurple.withValues(
+                              alpha: 0.2,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -512,7 +650,10 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                                 if (newVal != null) {
                                   await ref
                                       .read(reminderRepositoryProvider)
-                                      .updateReminderDaysBefore(reminder.id, newVal);
+                                      .updateReminderDaysBefore(
+                                        reminder.id,
+                                        newVal,
+                                      );
                                 }
                               },
                             ),
@@ -686,4 +827,115 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
       return timeStr;
     }
   }
+
+  void _showPermissionGuideDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.notifications_off_outlined,
+              color: AppColors.primaryPurple,
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Notifications Disabled',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: AppColors.text,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Notification permission was not granted. To receive reminders in your phone notification bar:',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.secondaryText,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildDialogStep('1', 'Open your phone Settings'),
+            const SizedBox(height: 10),
+            _buildDialogStep('2', 'Go to Apps (or Apps & Notifications)'),
+            const SizedBox(height: 10),
+            _buildDialogStep('3', 'Select Bloom'),
+            const SizedBox(height: 10),
+            _buildDialogStep('4', 'Tap Notifications and turn on "Allow notifications"'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryPurple,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Got it',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogStep(String stepNumber, String instruction) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.primaryPurple.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            stepNumber,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryPurple,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            instruction,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.text,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
+

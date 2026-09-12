@@ -41,11 +41,38 @@ final homeProvider = Provider<HomeState>((ref) {
   if (currentCycle != null) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final start = DateTime(
+    DateTime start = DateTime(
       currentCycle.startDate.year,
       currentCycle.startDate.month,
       currentCycle.startDate.day,
     );
+
+    final logsAsync = ref.watch(allDailyLogsStreamProvider);
+    final logs = logsAsync.value ?? [];
+
+    final loggedPeriodDates = logs
+        .where((l) => l.flowIntensity != null && l.flowIntensity != 'None')
+        .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    if (loggedPeriodDates.isNotEmpty) {
+      final latestPeriodDate = loggedPeriodDates.last;
+      DateTime latestPeriodStart = latestPeriodDate;
+      for (int i = loggedPeriodDates.length - 1; i >= 0; i--) {
+        final d = loggedPeriodDates[i];
+        if (latestPeriodStart.difference(d).inDays <= 3) {
+          latestPeriodStart = d;
+        } else {
+          break;
+        }
+      }
+      if (latestPeriodStart.isAfter(start) &&
+          latestPeriodStart.difference(start).inDays >= 15) {
+        start = latestPeriodStart;
+      }
+    }
+
     final diff = today.difference(start).inDays + 1;
     final cycleDay = diff > 0 ? diff : 1;
     final avgCycleLen = userAsync.value?.avgCycleLength ?? 29;
@@ -63,9 +90,6 @@ final homeProvider = Provider<HomeState>((ref) {
     final fertileEnd = start.add(Duration(days: avgCycleLen - 11));
     final fertileRange =
         '${DateFormat('MMM d').format(fertileStart)} - ${DateFormat('MMM d').format(fertileEnd)}';
-
-    final logsAsync = ref.watch(allDailyLogsStreamProvider);
-    final logs = logsAsync.value ?? [];
 
     // Find today's log if any
     final todayLog = logs

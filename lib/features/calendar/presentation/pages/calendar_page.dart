@@ -260,10 +260,28 @@ class CalendarPage extends ConsumerWidget {
                                   final now = DateTime.now();
                                   final today = DateTime(now.year, now.month, now.day);
                                   final upcoming = state.fertileDays.where((d) => !d.isBefore(today.subtract(const Duration(days: 5)))).toList();
-                                  final fStart = upcoming.isNotEmpty ? upcoming.first : state.fertileDays.first;
-                                  final fEnd = upcoming.isNotEmpty ? upcoming.last : state.fertileDays.last;
+                                  if (upcoming.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  // Extract only the first continuous fertile window block (6 days)
+                                  final firstWindow = <DateTime>[upcoming.first];
+                                  for (int i = 1; i < upcoming.length; i++) {
+                                    if (upcoming[i].difference(firstWindow.last).inDays == 1) {
+                                      firstWindow.add(upcoming[i]);
+                                    } else {
+                                      break; // Belongs to next cycle
+                                    }
+                                  }
+
+                                  final fStart = firstWindow.first;
+                                  final fEnd = firstWindow.last;
+                                  final label = fStart.month == fEnd.month
+                                      ? 'Fertile window ${fStart.day}-${fEnd.day} ${_getMonthName(fStart.month)}'
+                                      : 'Fertile window ${fStart.day} ${_getMonthName(fStart.month)} - ${fEnd.day} ${_getMonthName(fEnd.month)}';
+
                                   return Text(
-                                    'Fertile window ${fStart.day}-${fEnd.day} ${_getMonthName(fStart.month)}',
+                                    label,
                                     style: const TextStyle(
                                       color: AppColors.text,
                                       fontWeight: FontWeight.w600,

@@ -360,128 +360,185 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.only(left: 54),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.lightPurple,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: AppColors.primaryPurple.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.calendar_today_outlined,
-                      size: 14,
-                      color: AppColors.primaryPurple,
-                    ),
-                    const SizedBox(width: 6),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: days,
-                        icon: const Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 14,
-                          color: AppColors.primaryPurple,
+              child: (reminder.type == 'daily_log' || reminder.type == 'cycle_summary')
+                  ? InkWell(
+                      onTap: () => _editSingleReminderTime(context, reminder),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        isDense: true,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryPurple,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightPurple,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.primaryPurple.withValues(alpha: 0.2),
+                          ),
                         ),
-                        dropdownColor: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        selectedItemBuilder: (BuildContext context) {
-                          const options = [1, 2, 3, 5, 7];
-                          return options.map<Widget>((int val) {
-                            return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                '$val ${val == 1 ? "day" : "days"} before',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryPurple,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: AppColors.primaryPurple,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatTime12H(reminder.timeOfDay),
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryPurple,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.edit,
+                              size: 12,
+                              color: AppColors.primaryPurple,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightPurple,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.primaryPurple.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            size: 14,
+                            color: AppColors.primaryPurple,
+                          ),
+                          const SizedBox(width: 6),
+                          DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              value: days,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                size: 14,
+                                color: AppColors.primaryPurple,
+                              ),
+                              isDense: true,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryPurple,
+                              ),
+                              dropdownColor: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              selectedItemBuilder: (BuildContext context) {
+                                const options = [1, 2, 3, 5, 7];
+                                return options.map<Widget>((int val) {
+                                  return Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      '$val ${val == 1 ? "day" : "days"} before',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primaryPurple,
+                                      ),
+                                    ),
+                                  );
+                                }).toList();
+                              },
+                              items: [
+                                DropdownMenuItem(
+                                  value: 1,
+                                  child: Text(
+                                    '1 day before',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.text,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            );
-                          }).toList();
-                        },
-                        items: [
-                          DropdownMenuItem(
-                            value: 1,
-                            child: Text(
-                              '1 day before',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.text,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 2,
-                            child: Text(
-                              '2 days before',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.text,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 3,
-                            child: Text(
-                              '3 days before',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.text,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 5,
-                            child: Text(
-                              '5 days before',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.text,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 7,
-                            child: Text(
-                              '7 days before',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.text,
-                                fontSize: 13,
-                              ),
+                                DropdownMenuItem(
+                                  value: 2,
+                                  child: Text(
+                                    '2 days before',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.text,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 3,
+                                  child: Text(
+                                    '3 days before',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.text,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 5,
+                                  child: Text(
+                                    '5 days before',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.text,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 7,
+                                  child: Text(
+                                    '7 days before',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.text,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (int? newVal) async {
+                                if (newVal != null) {
+                                  await ref
+                                      .read(reminderRepositoryProvider)
+                                      .updateReminderDaysBefore(reminder.id, newVal);
+                                }
+                              },
                             ),
                           ),
                         ],
-                        onChanged: (int? newVal) async {
-                          if (newVal != null) {
-                            await ref
-                                .read(reminderRepositoryProvider)
-                                .updateReminderDaysBefore(reminder.id, newVal);
-                          }
-                        },
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _editSingleReminderTime(
+    BuildContext context,
+    Reminder reminder,
+  ) async {
+    final picked = await _pickTime(context, reminder.timeOfDay);
+    if (picked != null) {
+      final formatted =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await ref
+          .read(reminderRepositoryProvider)
+          .updateReminderTime(reminder.id, formatted);
+    }
   }
 
   Widget _buildReminderTile({

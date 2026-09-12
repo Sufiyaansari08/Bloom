@@ -119,6 +119,8 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    final allDailyLogs = ref.read(allDailyLogsStreamProvider).value ?? [];
+
     // Determine reference cycle start date
     DateTime cycleStart;
     if (currentCycle != null) {
@@ -129,7 +131,29 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
       cycleStart = now.subtract(const Duration(days: 14));
     }
 
-    final allDailyLogs = ref.read(allDailyLogsStreamProvider).value ?? [];
+    // If user has logged period flow >= 15 days after cycleStart, use that as active cycle start
+    final loggedPeriodDates = allDailyLogs
+        .where((l) => l.flowIntensity != null && l.flowIntensity != 'None')
+        .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    if (loggedPeriodDates.isNotEmpty) {
+      final latestPeriodDate = loggedPeriodDates.last;
+      DateTime latestPeriodStart = latestPeriodDate;
+      for (int i = loggedPeriodDates.length - 1; i >= 0; i--) {
+        final d = loggedPeriodDates[i];
+        if (latestPeriodStart.difference(d).inDays <= 3) {
+          latestPeriodStart = d;
+        } else {
+          break;
+        }
+      }
+      if (latestPeriodStart.isAfter(cycleStart) &&
+          latestPeriodStart.difference(cycleStart).inDays >= 15) {
+        cycleStart = latestPeriodStart;
+      }
+    }
 
     final List<DateTime> allExpectedPeriodDays = [];
     final List<DateTime> allFertileDays = [];
@@ -147,9 +171,9 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
 
     if (currentCycle != null) {
       final cleanCycleStart = DateTime(
-        currentCycle.startDate.year,
-        currentCycle.startDate.month,
-        currentCycle.startDate.day,
+        cycleStart.year,
+        cycleStart.month,
+        cycleStart.day,
       );
       final expectedDate = cleanCycleStart.add(Duration(days: avgCycleLen));
 
@@ -280,11 +304,15 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
           }
         }
 
-        // First upcoming period on or after today
+        // First upcoming period after current active period
         if (isPeriodPredictionEnabled && nextPeriodStart == null) {
-          if (!periodStart.isBefore(
-            today.subtract(Duration(days: avgPeriodLen - 1)),
-          )) {
+          final isCurrentActivePeriod = cycleIndex == 0 &&
+              !today.isBefore(periodStart) &&
+              today.isBefore(periodStart.add(Duration(days: avgPeriodLen)));
+          if (!isCurrentActivePeriod &&
+              !periodStart.isBefore(
+                today.subtract(Duration(days: avgPeriodLen - 1)),
+              )) {
             nextPeriodStart = periodStart;
             nextPeriodEnd = periodStart.add(Duration(days: avgPeriodLen - 1));
           }

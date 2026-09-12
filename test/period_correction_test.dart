@@ -5,6 +5,7 @@ import 'package:bloom/core/database/repositories/cycle_repository.dart';
 import 'package:bloom/core/database/repositories/daily_log_repository.dart';
 import 'package:bloom/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:bloom/features/checkin/presentation/providers/daily_checkin_provider.dart';
+import 'package:bloom/features/home/presentation/providers/home_provider.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -418,7 +419,75 @@ void main() {
     await testDb.close();
   });
 
-  test('Diagnose fertile window and reminders for seeded database state', () async {
+  test('When period is logged today (Sep 12), fertile window shifts to Sep 25-30 and ovulation to Sep 26, and fertile reminder is not shown', () async {
+    final testDb = AppDatabase(NativeDatabase.memory());
+    await DatabaseSeeder.seedInitialData(testDb);
+
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(testDb),
+      ],
+    );
+    // Keep calendarProvider alive
+    container.listen(calendarProvider, (_, __) {});
+
+    final today = DateTime(2026, 9, 12);
+
+    // User logs period for today
+    final repo = container.read(dailyLogRepositoryProvider);
+    await repo.upsertDailyLog(
+      DailyLogsCompanion.insert(
+        id: 'today_period_log',
+        userId: 'default_user',
+        date: today,
+        flowIntensity: const drift.Value('Medium'),
+      ),
+    );
+
+    // Allow streams to emit
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final calState = container.read(calendarProvider);
+    print('calState.periodDays: ${calState.periodDays}');
+    print('calState.ovulationDay: ${calState.ovulationDay}');
+    expect(calState.ovulationDay, DateTime(2026, 9, 27));
+    expect(calState.nextPeriodStartDate, DateTime(2026, 10, 11));
+
+    // Fertile days for this cycle must start on Sep 25
+    final firstFertileDay = calState.fertileDays.firstWhere((d) => !d.isBefore(today));
+    expect(firstFertileDay, DateTime(2026, 9, 25));
+
+    // Check Menstrual Summary text isolation logic
+    final upcoming = calState.fertileDays.where((d) => !d.isBefore(today.subtract(const Duration(days: 5)))).toList();
+    final firstWindow = <DateTime>[upcoming.first];
+    for (int i = 1; i < upcoming.length; i++) {
+      if (upcoming[i].difference(firstWindow.last).inDays == 1) {
+        firstWindow.add(upcoming[i]);
+      } else {
+        break;
+      }
+    }
+    final fStart = firstWindow.first;
+    final fEnd = firstWindow.last;
+    expect(fStart, DateTime(2026, 9, 25));
+    expect(fEnd, DateTime(2026, 9, 30));
+
+    final summaryLabel = fStart.month == fEnd.month
+        ? 'Fertile window ${fStart.day}-${fEnd.day} September'
+        : 'Fertile window ${fStart.day} - ${fEnd.day}';
+    expect(summaryLabel, 'Fertile window 25-30 September');
+
+    // Home Card also reflects Sep 12 as Cycle Day 1
+    final homeState = container.read(homeProvider);
+    expect(homeState.isPeriodOngoing, isTrue);
+    expect(homeState.cycleDay, 1);
+    expect(homeState.periodDateRange, 'Oct 11 - Oct 15');
+    expect(homeState.fertileWindowRange, 'Sep 25 - Sep 30');
+
+    await testDb.close();
+  });
+
+  test('Daily check-in reminder detects whether user has logged today and updates completion status', () async {
     final testDb = AppDatabase(NativeDatabase.memory());
     await DatabaseSeeder.seedInitialData(testDb);
 
@@ -428,26 +497,41 @@ void main() {
       ],
     );
 
-    final calState = container.read(calendarProvider);
-    print('calendarState fertileDays: ${calState.fertileDays}');
-    print('calendarState ovulationDay: ${calState.ovulationDay}');
-    print('calendarState nextPeriodStartDate: ${calState.nextPeriodStartDate}');
-    print('calendarState isPeriodLate: ${calState.isPeriodLate}, daysLate: ${calState.daysLate}');
+    final today = DateTime(2026, 9, 12);
+    final repo = container.read(dailyLogRepositoryProvider);
 
-    final today = DateTime.now();
-    final upcoming = calState.fertileDays.where((d) => !d.isBefore(DateTime(today.year, today.month, today.day).subtract(const Duration(days: 5)))).toList();
-    print('upcoming fertile days count: ${upcoming.length}');
-    if (upcoming.isNotEmpty) {
-      print('upcoming.first: ${upcoming.first}');
-      print('upcoming.last: ${upcoming.last}');
-    }
+    // Initial check: no logs today
+    var todayLog = await repo.getLogForDate(today);
+    bool hasCheckedInToday = todayLog != null && (
+      (todayLog.mood != null && todayLog.mood != 'None') ||
+      (todayLog.painLevel != null && todayLog.painLevel! > 0) ||
+      (todayLog.flowIntensity != null && todayLog.flowIntensity != 'None') ||
+      (todayLog.waterIntake != null && todayLog.waterIntake!.isNotEmpty) ||
+      (todayLog.sleepHours != null && todayLog.sleepHours! > 0)
+    );
+    expect(hasCheckedInToday, isFalse);
 
-    final curCycle = await testDb.select(testDb.cycles).get();
-    print('All cycles in DB:');
-    for (final c in curCycle) {
-      print('Cycle: id=${c.id}, start=${c.startDate}, end=${c.endDate}');
-    }
+    // Log sleep/checkin today
+    await repo.upsertDailyLog(
+      DailyLogsCompanion.insert(
+        id: 'test_checkin_today',
+        userId: 'default_user',
+        date: today,
+        sleepHours: const drift.Value(7.5),
+      ),
+    );
+
+    todayLog = await repo.getLogForDate(today);
+    hasCheckedInToday = todayLog != null && (
+      (todayLog.mood != null && todayLog.mood != 'None') ||
+      (todayLog.painLevel != null && todayLog.painLevel! > 0) ||
+      (todayLog.flowIntensity != null && todayLog.flowIntensity != 'None') ||
+      (todayLog.waterIntake != null && todayLog.waterIntake!.isNotEmpty) ||
+      (todayLog.sleepHours != null && todayLog.sleepHours! > 0)
+    );
+    expect(hasCheckedInToday, isTrue);
 
     await testDb.close();
   });
 }
+

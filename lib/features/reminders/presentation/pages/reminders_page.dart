@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../shared/widgets/bloom_button.dart';
+import '../../../calendar/presentation/providers/calendar_provider.dart';
 
 class RemindersPage extends ConsumerWidget {
   const RemindersPage({super.key});
@@ -14,9 +15,15 @@ class RemindersPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final remindersAsync = ref.watch(allRemindersStreamProvider);
     final userAsync = ref.watch(userProfileStreamProvider);
-    final currentCycleAsync = ref.watch(currentCycleStreamProvider);
-    final allCyclesAsync = ref.watch(allCyclesStreamProvider);
     final dailyLogsAsync = ref.watch(allDailyLogsStreamProvider);
+
+    final user = userAsync.value;
+    final allReminders = remindersAsync.value ?? [];
+    if (user != null && allReminders.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(reminderRepositoryProvider).ensureStandardReminders(user.id);
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -102,32 +109,12 @@ class RemindersPage extends ConsumerWidget {
           }
 
           final user = userAsync.value;
-          final currentCycle = currentCycleAsync.value;
-          final allCycles = allCyclesAsync.value ?? [];
           final logs = dailyLogsAsync.value ?? [];
+          final calendarState = ref.watch(calendarProvider);
 
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
-          final avgCycleLen = user?.avgCycleLength ?? 29;
           final avgPeriodLen = user?.avgPeriodLength ?? 5;
-
-          // Determine cycle reference point
-          DateTime cycleStart;
-          if (currentCycle != null) {
-            cycleStart = currentCycle.startDate;
-          } else if (allCycles.isNotEmpty) {
-            cycleStart = allCycles.first.startDate;
-          } else {
-            cycleStart = now.subtract(const Duration(days: 14));
-          }
-
-          final diff = today.difference(DateTime(cycleStart.year, cycleStart.month, cycleStart.day)).inDays + 1;
-          final cycleDay = diff > 0 ? diff : 1;
-          final daysUntilPeriod = avgCycleLen - cycleDay;
-
-          // Ovulation: estimated 14 days before next period start
-          final ovulationDay = avgCycleLen - 14;
-          final daysUntilOvulation = ovulationDay - cycleDay;
 
           // Today's daily log check
           final todayLog = logs.where((log) =>
@@ -144,22 +131,53 @@ class RemindersPage extends ConsumerWidget {
             (todayLog.sleepHours != null && todayLog.sleepHours! > 0)
           );
 
-          // Period logged check:
-          // User has logged period if currently in first days of newly logged cycle or has flow today
-          final daysSinceCycleStart = today.difference(DateTime(cycleStart.year, cycleStart.month, cycleStart.day)).inDays;
+          // Period ongoing check:
+          // User is on period if flow logged today or logged within current period length
           final hasFlowToday = todayLog?.flowIntensity != null && todayLog!.flowIntensity != 'None';
-          final isCurrentlyInLoggedPeriod = currentCycle != null && daysSinceCycleStart >= 0 && daysSinceCycleStart < avgPeriodLen;
-          final isPeriodLogged = hasFlowToday || isCurrentlyInLoggedPeriod;
+          final hasRecentFlow = logs.any((l) =>
+            l.flowIntensity != null &&
+            l.flowIntensity != 'None' &&
+            today.difference(DateTime(l.date.year, l.date.month, l.date.day)).inDays >= 0 &&
+            today.difference(DateTime(l.date.year, l.date.month, l.date.day)).inDays < avgPeriodLen
+          );
+          final isPeriodOngoing = hasFlowToday || hasRecentFlow;
+
+          // Next period calculation from calendarState
+          final nextPeriodDate = calendarState.nextPeriodStartDate;
+          final daysUntilPeriod = nextPeriodDate != null ? nextPeriodDate.difference(today).inDays : 999;
+
+          // Ovulation calculation from calendarState
+          final ovulationDate = calendarState.ovulationDay;
+          final daysUntilOvulation = ovulationDate != null ? ovulationDate.difference(today).inDays : 999;
+
+          // Fertile window calculation from calendarState
+          final upcomingFertile = calendarState.fertileDays.where((d) => !d.isBefore(today)).toList();
+          final firstFertileWindow = <DateTime>[];
+          if (upcomingFertile.isNotEmpty) {
+            firstFertileWindow.add(upcomingFertile.first);
+            for (int i = 1; i < upcomingFertile.length; i++) {
+              if (upcomingFertile[i].difference(firstFertileWindow.last).inDays == 1) {
+                firstFertileWindow.add(upcomingFertile[i]);
+              } else {
+                break;
+              }
+            }
+          }
+          final fertileStart = firstFertileWindow.isNotEmpty ? firstFertileWindow.first : null;
+          final fertileEnd = firstFertileWindow.isNotEmpty ? firstFertileWindow.last : null;
+          final daysUntilFertile = fertileStart != null ? fertileStart.difference(today).inDays : 999;
+          final isFertileActiveToday = fertileStart != null && fertileEnd != null && !today.isBefore(fertileStart) && !today.isAfter(fertileEnd);
 
           // Filter only reminders that are strictly due/necessary
           final dueReminders = enabledReminders.where((r) {
             return _isReminderDue(
               r: r,
-              cycleDay: cycleDay,
-              avgCycleLen: avgCycleLen,
               daysUntilPeriod: daysUntilPeriod,
               daysUntilOvulation: daysUntilOvulation,
-              isPeriodLogged: isPeriodLogged,
+              daysUntilFertile: daysUntilFertile,
+              isFertileActiveToday: isFertileActiveToday,
+              isPeriodOngoing: isPeriodOngoing,
+              isPeriodLate: calendarState.isPeriodLate,
               hasCheckedInToday: hasCheckedInToday,
               today: today,
             );
@@ -231,14 +249,22 @@ class RemindersPage extends ConsumerWidget {
                 ? now
                 : (r.updatedAt.isAfter(now) ? now : r.updatedAt);
             final dateStr = _formatNotificationDate(reminderDate, now);
-            final timeStr = _formatNotificationTime(reminderDate);
+            final timeStr = r.timeOfDay.isNotEmpty
+                ? _formatTime12H(r.timeOfDay)
+                : _formatNotificationTime(reminderDate);
 
             return _getReminderItem(
+              context,
               r,
               dateStr,
               timeStr,
               daysUntilPeriod,
               daysUntilOvulation,
+              daysUntilFertile,
+              calendarState.isPeriodLate,
+              calendarState.daysLate,
+              fertileStart,
+              hasCheckedInToday,
             );
           }).toList();
 
@@ -277,6 +303,7 @@ class RemindersPage extends ConsumerWidget {
       ),
     );
   }
+
   String _formatNotificationDate(DateTime date, DateTime now) {
     final targetDay = DateTime(date.year, date.month, date.day);
     final today = DateTime(now.year, now.month, now.day);
@@ -339,11 +366,12 @@ class RemindersPage extends ConsumerWidget {
 
   bool _isReminderDue({
     required Reminder r,
-    required int cycleDay,
-    required int avgCycleLen,
     required int daysUntilPeriod,
     required int daysUntilOvulation,
-    required bool isPeriodLogged,
+    required int daysUntilFertile,
+    required bool isFertileActiveToday,
+    required bool isPeriodOngoing,
+    required bool isPeriodLate,
     required bool hasCheckedInToday,
     required DateTime today,
   }) {
@@ -351,28 +379,24 @@ class RemindersPage extends ConsumerWidget {
 
     switch (r.type) {
       case 'period_start':
-        // Starts from the days the user selected (e.g., 1 or 2 days before)
-        // and continues until the user logs the period
-        if (isPeriodLogged) return false;
-        return daysUntilPeriod <= r.daysBefore;
+        if (isPeriodOngoing) return false;
+        if (isPeriodLate) return true;
+        return daysUntilPeriod <= r.daysBefore && daysUntilPeriod >= 0;
 
       case 'daily_log':
-        // Daily check-in reminder comes daily until the user logs for today
-        return !hasCheckedInToday;
+        return true;
 
       case 'ovulation':
-        // Ovulation reminder comes only when ovulation is tomorrow or today
+        if (isPeriodOngoing) return false;
         return daysUntilOvulation >= 0 && daysUntilOvulation <= 1;
 
       case 'fertile_window':
-        // Starts 1 day prior to fertile window through the active fertile window (until ovulation day)
-        return daysUntilOvulation >= 0 && daysUntilOvulation <= 6;
+        if (isPeriodOngoing) return false;
+        return daysUntilFertile == 1 || isFertileActiveToday;
 
       case 'cycle_summary':
-        // Monthly cycle summary comes after every month or cycle completion
         final isMonthlySummaryTime = today.day <= 3 || today.day >= 28;
-        final isCycleCompleted = cycleDay >= avgCycleLen;
-        return isMonthlySummaryTime || isCycleCompleted;
+        return isMonthlySummaryTime;
 
       default:
         return false;
@@ -380,26 +404,37 @@ class RemindersPage extends ConsumerWidget {
   }
 
   _ReminderDisplayItem _getReminderItem(
+    BuildContext context,
     Reminder r,
     String exactDate,
     String exactTime,
     int daysUntilPeriod,
     int daysUntilOvulation,
+    int daysUntilFertile,
+    bool isPeriodLate,
+    int daysLate,
+    DateTime? fertileStart,
+    bool hasCheckedInToday,
   ) {
     IconData icon;
     Color color;
     String title;
     String description;
+    bool isCompleted = false;
+    String? actionLabel;
+    VoidCallback? onAction;
 
     switch (r.type) {
       case 'period_start':
         icon = Icons.water_drop_outlined;
         color = AppColors.primaryPink;
         title = 'Expected period alert';
-        if (daysUntilPeriod <= 0) {
+        if (isPeriodLate) {
+          description = 'Your period is $daysLate ${daysLate == 1 ? "day" : "days"} late.';
+        } else if (daysUntilPeriod <= 0) {
           description = 'You may get your period today.';
         } else if (daysUntilPeriod == 1) {
-          description = 'You may get your period in 1 day.';
+          description = 'You may get your period tomorrow.';
         } else {
           description = 'You may get your period in $daysUntilPeriod days.';
         }
@@ -410,7 +445,7 @@ class RemindersPage extends ConsumerWidget {
         color = const Color(0xFFF4C059);
         title = 'Ovulation reminder';
         if (daysUntilOvulation <= 0) {
-          description = 'You may have your ovulation today.';
+          description = 'Today is your predicted ovulation day.';
         } else if (daysUntilOvulation == 1) {
           description = 'You may have your ovulation tomorrow.';
         } else {
@@ -422,8 +457,8 @@ class RemindersPage extends ConsumerWidget {
         icon = Icons.spa_outlined;
         color = const Color(0xFF2E7D32);
         title = 'Fertile window reminder';
-        if (daysUntilOvulation == 6) {
-          description = 'Your fertile window begins tomorrow.';
+        if (daysUntilFertile == 1 && fertileStart != null) {
+          description = 'Your fertile window begins tomorrow (${DateFormat('MMM d').format(fertileStart)}).';
         } else if (daysUntilOvulation == 0) {
           description = 'Today is your peak fertile day (ovulation day).';
         } else {
@@ -432,10 +467,23 @@ class RemindersPage extends ConsumerWidget {
         break;
 
       case 'daily_log':
-        icon = Icons.edit_note;
-        color = AppColors.primaryPurple;
-        title = 'Daily check-in reminder';
-        description = 'Remember to log your mood, flow, and symptoms for today.';
+        if (hasCheckedInToday) {
+          icon = Icons.check_circle_outline;
+          color = const Color(0xFF2E7D32);
+          title = 'Daily check-in completed';
+          description = "You've already logged your health data for today. Great job keeping your cycle tracking up to date!";
+          isCompleted = true;
+          actionLabel = 'View / Edit Check-in';
+          onAction = () => context.push('/checkin/mood');
+        } else {
+          icon = Icons.edit_note;
+          color = AppColors.primaryPurple;
+          title = 'Daily check-in reminder';
+          description = 'Remember to log your mood, flow, and symptoms for today.';
+          isCompleted = false;
+          actionLabel = 'Log Check-in Now';
+          onAction = () => context.push('/checkin/mood');
+        }
         break;
 
       case 'cycle_summary':
@@ -444,6 +492,8 @@ class RemindersPage extends ConsumerWidget {
         color = const Color(0xFF1E88E5);
         title = 'Monthly cycle summary';
         description = 'Your cycle summary and personalized insights are ready.';
+        actionLabel = 'View Insights';
+        onAction = () => context.push('/insights');
         break;
     }
 
@@ -454,6 +504,9 @@ class RemindersPage extends ConsumerWidget {
       time: exactTime,
       icon: icon,
       color: color,
+      isCompleted: isCompleted,
+      actionLabel: actionLabel,
+      onAction: onAction,
     );
   }
 
@@ -530,13 +583,66 @@ class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.text,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.text,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (item.isCompleted)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.check, size: 12, color: Color(0xFF2E7D32)),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Logged',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.lightPurple,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Due Today',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primaryPurple,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -553,29 +659,57 @@ class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
                       child: _isExpanded
                           ? Padding(
                               padding: const EdgeInsets.only(top: 10.0),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.calendar_today_outlined, size: 13, color: item.color),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    item.date,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.secondaryText,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_outlined, size: 13, color: item.color),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        item.date,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.secondaryText,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Icon(Icons.access_time, size: 13, color: item.color),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        item.time,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.secondaryText,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 16),
-                                  Icon(Icons.access_time, size: 13, color: item.color),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    item.time,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.secondaryText,
+                                  if (item.actionLabel != null && item.onAction != null) ...[
+                                    const SizedBox(height: 12),
+                                    InkWell(
+                                      onTap: item.onAction,
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: item.color.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: item.color.withValues(alpha: 0.3)),
+                                        ),
+                                        child: Text(
+                                          item.actionLabel!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: item.color,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                             )
@@ -599,6 +733,9 @@ class _ReminderDisplayItem {
   final String time;
   final IconData icon;
   final Color color;
+  final bool isCompleted;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   const _ReminderDisplayItem({
     required this.title,
@@ -607,5 +744,8 @@ class _ReminderDisplayItem {
     required this.time,
     required this.icon,
     required this.color,
+    this.isCompleted = false,
+    this.actionLabel,
+    this.onAction,
   });
 }

@@ -17,6 +17,7 @@ void main() async {
 
   try {
     await NotificationService.instance.initialize();
+    await NotificationService.instance.requestPermissions();
     NotificationService.instance.onNotificationTapped = (payload) {
       final route =
           (payload != null && payload.isNotEmpty) ? payload : '/reminders';

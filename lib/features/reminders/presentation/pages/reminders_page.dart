@@ -278,11 +278,28 @@ class RemindersPage extends ConsumerWidget {
           final items = dueReminders.map((r) {
             final reminderKey =
                 '${r.type}_${today.year}_${today.month}_${today.day}';
-            final reminderDate = (r.updatedAt.year == now.year &&
-                    r.updatedAt.month == now.month &&
-                    r.updatedAt.day == now.day)
-                ? now
-                : (r.updatedAt.isAfter(now) ? now : r.updatedAt);
+            // Determine the relevant scheduled date for this reminder
+            DateTime reminderDate;
+            switch (r.type) {
+              case 'daily_log':
+                reminderDate = today;
+                break;
+              case 'period_start':
+                reminderDate = calendarState.nextPeriodStartDate ?? today;
+                break;
+              case 'ovulation':
+                reminderDate = calendarState.ovulationDay ?? today;
+                break;
+              case 'fertile_window':
+                reminderDate = fertileStart ?? today;
+                break;
+              case 'cycle_summary':
+                reminderDate = today;
+                break;
+              default:
+                reminderDate = today;
+            }
+
             final dateStr = _formatNotificationDate(reminderDate, now);
             final timeStr = r.timeOfDay.isNotEmpty
                 ? _formatTime12H(r.timeOfDay)
@@ -644,7 +661,7 @@ class _ReminderCardWidget extends StatefulWidget {
 }
 
 class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
-  bool _isExpanded = true;
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -755,61 +772,28 @@ class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
                     AnimatedSize(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeInOut,
-                      child: _isExpanded
+                      child: _isExpanded && item.actionLabel != null && item.onAction != null
                           ? Padding(
-                              padding: const EdgeInsets.only(top: 10.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.calendar_today_outlined, size: 13, color: item.color),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        item.date,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.secondaryText,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Icon(Icons.access_time, size: 13, color: item.color),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        item.time,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.secondaryText,
-                                        ),
-                                      ),
-                                    ],
+                              padding: const EdgeInsets.only(top: 12.0),
+                              child: InkWell(
+                                onTap: item.onAction,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: item.color.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: item.color.withValues(alpha: 0.3)),
                                   ),
-                                  if (item.actionLabel != null && item.onAction != null) ...[
-                                    const SizedBox(height: 12),
-                                    InkWell(
-                                      onTap: item.onAction,
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: item.color.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: item.color.withValues(alpha: 0.3)),
-                                        ),
-                                        child: Text(
-                                          item.actionLabel!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: item.color,
-                                          ),
-                                        ),
-                                      ),
+                                  child: Text(
+                                    item.actionLabel!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: item.color,
                                     ),
-                                  ],
-                                ],
+                                  ),
+                                ),
                               ),
                             )
                           : const SizedBox.shrink(),
@@ -841,8 +825,8 @@ class _ReminderDisplayItem {
     required this.id,
     required this.title,
     required this.description,
-    required this.date,
-    required this.time,
+    this.date = '',
+    this.time = '',
     required this.icon,
     required this.color,
     this.isCompleted = false,

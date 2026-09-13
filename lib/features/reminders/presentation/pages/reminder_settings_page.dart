@@ -113,12 +113,7 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                         const Divider(color: AppColors.border, height: 1),
 
                         // 4. Daily check-in reminder
-                        _buildReminderTile(
-                          icon: Icons.edit_note,
-                          title: 'Daily check-in reminder',
-                          subtitle: 'Notify to log symptoms & mood',
-                          reminder: dailyLogReminder,
-                        ),
+                        _buildDailyLogReminderTile(dailyLogReminder),
                         const Divider(color: AppColors.border, height: 1),
 
                         // 5. Monthly cycle summary
@@ -382,10 +377,12 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                                             size: 18,
                                           ),
                                           SizedBox(width: 8),
-                                          Text(
-                                            'System notification permissions are active!',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
+                                          Expanded(
+                                            child: Text(
+                                              'System notification permissions are active!',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -399,11 +396,82 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                                 }
                               },
                               icon: const Icon(Icons.security, size: 16),
-                              label: const Text(
-                                'Check Permissions',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Check Permissions',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryPurple,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                              onPressed: () async {
+                                final sent = await NotificationService.instance
+                                    .showInstantNotification(
+                                  id: NotificationService.idTest,
+                                    title: 'Bloom Daily Check-in 🌿',
+                                    body:
+                                        'Remember to log your mood, symptoms, and health today.',
+                                  );
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(
+                                          sent
+                                              ? Icons.check_circle_rounded
+                                              : Icons.warning_amber_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            sent
+                                                ? 'Test alert sent to status bar!'
+                                                : 'Could not send test alert. Please check phone permissions.',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: sent
+                                        ? const Color(0xFF2E7D32)
+                                        : const Color(0xFFD32F2F),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.notifications_active, size: 16),
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Send Test Notification Now',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
@@ -680,6 +748,123 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
           .read(reminderRepositoryProvider)
           .updateReminderTime(reminder.id, formatted);
     }
+  }
+
+  Widget _buildDailyLogReminderTile(Reminder? reminder) {
+    final isEnabled = reminder?.isEnabled ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isEnabled ? AppColors.lightPurple : AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.edit_note,
+                  color: isEnabled
+                      ? AppColors.primaryPurple
+                      : AppColors.secondaryText,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily check-in reminder',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Notify to log symptoms & mood',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isEnabled,
+                activeTrackColor: AppColors.primaryPurple,
+                onChanged: (val) async {
+                  if (reminder != null) {
+                    await ref
+                        .read(reminderRepositoryProvider)
+                        .toggleReminder(reminder.id, val);
+                  }
+                },
+              ),
+            ],
+          ),
+          if (isEnabled && reminder != null) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(left: 54),
+              child: InkWell(
+                onTap: () => _editSingleReminderTime(context, reminder),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightPurple,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppColors.primaryPurple.withValues(
+                        alpha: 0.2,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppColors.primaryPurple,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatTime12H(reminder.timeOfDay),
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryPurple,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(
+                        Icons.edit,
+                        size: 12,
+                        color: AppColors.primaryPurple,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildReminderTile({

@@ -12,7 +12,7 @@ class NotificationService {
 
   bool _isInitialized = false;
 
-  static const String channelId = 'bloom_reminders';
+  static const String channelId = 'bloom_reminders_v2';
   static const String channelName = 'Bloom Reminders';
   static const String channelDescription =
       'Notifications for period tracking, fertile window, and daily check-ins';
@@ -44,7 +44,7 @@ class NotificationService {
       final offset = DateTime.now().timeZoneOffset;
       tz.Location? matched;
       for (final loc in tz.timeZoneDatabase.locations.values) {
-        if (loc.zones.any((z) => z.offset == offset)) {
+        if (loc.currentTimeZone.offset == offset) {
           matched = loc;
           break;
         }
@@ -59,21 +59,17 @@ class NotificationService {
     }
 
     try {
-      const androidSettings =
-          AndroidInitializationSettings('@mipmap/launcher_icon');
-      const darwinSettings = DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
-      );
-      const linuxSettings = LinuxInitializationSettings(
-        defaultActionName: 'Open notification',
-      );
       const initSettings = InitializationSettings(
-        android: androidSettings,
-        iOS: darwinSettings,
-        macOS: darwinSettings,
-        linux: linuxSettings,
+        android: AndroidInitializationSettings('ic_notification'),
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestBadgePermission: false,
+          requestSoundPermission: false,
+        ),
+        macOS: DarwinInitializationSettings(),
+        linux: LinuxInitializationSettings(
+          defaultActionName: 'Open notification',
+        ),
       );
 
       final initialized = await _plugin.initialize(
@@ -172,11 +168,11 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
-      icon: '@mipmap/launcher_icon',
-      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+      icon: 'ic_notification',
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
+        summaryText: 'Bloom',
         htmlFormatContentTitle: false,
         htmlFormatBigText: false,
       ),
@@ -206,14 +202,42 @@ class NotificationService {
         if (!ok) return false;
       }
 
-      await _plugin.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: _notificationDetails(title: title, body: body),
-        payload: payload ?? '/reminders',
-      );
-      return true;
+      try {
+        await _plugin.show(
+          id: id,
+          title: title,
+          body: body,
+          notificationDetails: _notificationDetails(title: title, body: body),
+          payload: payload ?? '/reminders',
+        );
+        return true;
+      } catch (innerErr) {
+        debugPrint('showInstantNotification first attempt failed ($innerErr), attempting fallback details...');
+        final fallbackAndroid = AndroidNotificationDetails(
+          channelId,
+          channelName,
+          channelDescription: channelDescription,
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+          styleInformation: BigTextStyleInformation(
+            body,
+            contentTitle: title,
+            summaryText: 'Bloom',
+          ),
+        );
+        await _plugin.show(
+          id: id,
+          title: title,
+          body: body,
+          notificationDetails: NotificationDetails(
+            android: fallbackAndroid,
+            iOS: const DarwinNotificationDetails(),
+          ),
+          payload: payload ?? '/reminders',
+        );
+        return true;
+      }
     } catch (e, stack) {
       debugPrint('Error showing notification: $e\n$stack');
       return false;
@@ -253,13 +277,11 @@ class NotificationService {
       final body = isDiscrete
           ? 'Time for your daily Bloom check-in.'
           : 'Remember to log your mood, flow, and symptoms for today.';
-      await _plugin.zonedSchedule(
+      await _safeZonedSchedule(
         id: idDailyCheckIn,
         title: title,
         body: body,
         scheduledDate: scheduledDate,
-        notificationDetails: _notificationDetails(title: title, body: body),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: '/reminders',
       );
@@ -306,13 +328,11 @@ class NotificationService {
           : (daysBefore == 0
               ? 'You may get your period today.'
               : 'Your period is expected in $daysBefore ${daysBefore == 1 ? "day" : "days"}.');
-      await _plugin.zonedSchedule(
+      await _safeZonedSchedule(
         id: idPeriodAlert,
         title: title,
         body: body,
         scheduledDate: scheduledDate,
-        notificationDetails: _notificationDetails(title: title, body: body),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: '/reminders',
       );
       return true;
@@ -352,13 +372,11 @@ class NotificationService {
       final body = isDiscrete
           ? 'A new phase update is ready in Bloom. Tap to check your insights.'
           : 'Your fertile window begins tomorrow.';
-      await _plugin.zonedSchedule(
+      await _safeZonedSchedule(
         id: idFertileAlert,
         title: title,
         body: body,
         scheduledDate: scheduledDate,
-        notificationDetails: _notificationDetails(title: title, body: body),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: '/reminders',
       );
       return true;
@@ -397,19 +415,56 @@ class NotificationService {
       final body = isDiscrete
           ? 'New daily insight ready for you in Bloom.'
           : 'Today is your predicted ovulation day.';
-      await _plugin.zonedSchedule(
+      await _safeZonedSchedule(
         id: idOvulationAlert,
         title: title,
         body: body,
         scheduledDate: scheduledDate,
-        notificationDetails: _notificationDetails(title: title, body: body),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: '/reminders',
       );
       return true;
     } catch (e) {
       debugPrint('Error scheduling ovulation alert notification: $e');
       return false;
+    }
+  }
+
+  Future<void> _safeZonedSchedule({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledDate,
+    DateTimeComponents? matchDateTimeComponents,
+    String? payload,
+  }) async {
+    final details = _notificationDetails(title: title, body: body);
+    try {
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: matchDateTimeComponents,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Exact alarm not permitted ($e), falling back to inexact: $id');
+      try {
+        await _plugin.zonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: scheduledDate,
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: matchDateTimeComponents,
+          payload: payload,
+        );
+      } catch (fallbackErr) {
+        debugPrint('Fallback scheduling also failed: $fallbackErr');
+      }
     }
   }
 

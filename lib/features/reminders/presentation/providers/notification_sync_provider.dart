@@ -2,11 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../calendar/presentation/providers/calendar_provider.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 final notificationSyncProvider = Provider<void>((ref) {
   final remindersAsync = ref.watch(allRemindersStreamProvider);
   final calendarState = ref.watch(calendarProvider);
   final dailyLogsAsync = ref.watch(allDailyLogsStreamProvider);
+  final secState = ref.watch(privacySecurityProvider);
+  final isDiscrete = secState.isDiscreteNotificationsEnabled;
 
   final reminders = remindersAsync.value;
   if (reminders == null || reminders.isEmpty) return;
@@ -50,6 +53,7 @@ final notificationSyncProvider = Provider<void>((ref) {
         hour: hour,
         minute: minute,
         isEnabled: dailyReminder.isEnabled,
+        isDiscrete: isDiscrete,
       );
     }
   }
@@ -63,6 +67,7 @@ final notificationSyncProvider = Provider<void>((ref) {
         periodDate: nextPeriod,
         daysBefore: periodReminder.daysBefore,
         isEnabled: periodReminder.isEnabled,
+        isDiscrete: isDiscrete,
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idPeriodAlert);
@@ -79,6 +84,7 @@ final notificationSyncProvider = Provider<void>((ref) {
       NotificationService.instance.scheduleFertileAlert(
         fertileStart: fertileStart,
         isEnabled: fertileReminder.isEnabled,
+        isDiscrete: isDiscrete,
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idFertileAlert);
@@ -93,6 +99,7 @@ final notificationSyncProvider = Provider<void>((ref) {
       NotificationService.instance.scheduleOvulationAlert(
         ovulationDate: ovulationDay,
         isEnabled: ovulationReminder.isEnabled,
+        isDiscrete: isDiscrete,
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idOvulationAlert);

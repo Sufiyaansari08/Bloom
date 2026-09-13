@@ -224,6 +224,7 @@ class NotificationService {
     required int hour,
     required int minute,
     required bool isEnabled,
+    bool isDiscrete = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -248,8 +249,10 @@ class NotificationService {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      const title = 'Daily Check-in Reminder';
-      const body = 'Remember to log your mood, flow, and symptoms for today.';
+      final title = isDiscrete ? 'Daily Check-in 🌿' : 'Daily Check-in Reminder';
+      final body = isDiscrete
+          ? 'Time for your daily Bloom check-in.'
+          : 'Remember to log your mood, flow, and symptoms for today.';
       await _plugin.zonedSchedule(
         id: idDailyCheckIn,
         title: title,
@@ -260,7 +263,7 @@ class NotificationService {
         matchDateTimeComponents: DateTimeComponents.time,
         payload: '/reminders',
       );
-      debugPrint('Scheduled daily check-in at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+      debugPrint('Scheduled daily check-in (isDiscrete: $isDiscrete) at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
       return true;
     } catch (e) {
       debugPrint('Error scheduling daily checkin notification: $e');
@@ -272,6 +275,7 @@ class NotificationService {
     required DateTime periodDate,
     required int daysBefore,
     required bool isEnabled,
+    bool isDiscrete = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -294,10 +298,14 @@ class NotificationService {
 
       if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
 
-      const title = 'Expected Period Alert';
-      final body = daysBefore == 0
-          ? 'You may get your period today.'
-          : 'Your period is expected in $daysBefore ${daysBefore == 1 ? "day" : "days"}.';
+      final title = isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
+      final body = isDiscrete
+          ? (daysBefore == 0
+              ? 'You have an expected cycle milestone today. Tap to view.'
+              : 'You have an upcoming cycle milestone in $daysBefore ${daysBefore == 1 ? "day" : "days"}.')
+          : (daysBefore == 0
+              ? 'You may get your period today.'
+              : 'Your period is expected in $daysBefore ${daysBefore == 1 ? "day" : "days"}.');
       await _plugin.zonedSchedule(
         id: idPeriodAlert,
         title: title,
@@ -317,6 +325,7 @@ class NotificationService {
   Future<bool> scheduleFertileAlert({
     required DateTime fertileStart,
     required bool isEnabled,
+    bool isDiscrete = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -339,8 +348,10 @@ class NotificationService {
 
       if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
 
-      const title = 'Fertile Window Alert';
-      const body = 'Your fertile window begins tomorrow.';
+      final title = isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
+      final body = isDiscrete
+          ? 'A new phase update is ready in Bloom. Tap to check your insights.'
+          : 'Your fertile window begins tomorrow.';
       await _plugin.zonedSchedule(
         id: idFertileAlert,
         title: title,
@@ -360,6 +371,7 @@ class NotificationService {
   Future<bool> scheduleOvulationAlert({
     required DateTime ovulationDate,
     required bool isEnabled,
+    bool isDiscrete = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -381,8 +393,10 @@ class NotificationService {
 
       if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
 
-      const title = 'Ovulation Day Alert';
-      const body = 'Today is your predicted ovulation day.';
+      final title = isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Day Alert';
+      final body = isDiscrete
+          ? 'New daily insight ready for you in Bloom.'
+          : 'Today is your predicted ovulation day.';
       await _plugin.zonedSchedule(
         id: idOvulationAlert,
         title: title,

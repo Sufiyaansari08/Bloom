@@ -91,7 +91,9 @@ class ProfilePage extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.lock_outline,
                       title: 'Privacy & Security',
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/privacy_security');
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.notifications_none,

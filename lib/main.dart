@@ -7,7 +7,10 @@ import 'core/database/database_providers.dart';
 import 'core/database/database_seeder.dart';
 
 import 'core/services/notification_service.dart';
+import 'core/services/security_storage_service.dart';
 import 'features/reminders/presentation/providers/notification_sync_provider.dart';
+import 'features/profile/presentation/providers/privacy_security_provider.dart';
+import 'features/profile/presentation/widgets/in_app_security_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +36,9 @@ void main() async {
     debugPrint('NotificationService init error in main: $e');
   }
 
+  final initialSecurityState =
+      await SecurityStorageService.instance.loadSettings();
+
   final db = AppDatabase();
   await DatabaseSeeder.seedInitialData(db);
 
@@ -40,6 +46,9 @@ void main() async {
     ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(db),
+        privacySecurityProvider.overrideWith(
+          (ref) => PrivacySecurityNotifier(initialSecurityState),
+        ),
       ],
       child: const BloomApp(),
     ),
@@ -59,6 +68,8 @@ class BloomApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) =>
+          InAppSecurityGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -408,74 +408,6 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryPurple,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed: () async {
-                                final sent = await NotificationService.instance
-                                    .showInstantNotification(
-                                  id: NotificationService.idTest,
-                                    title: 'Bloom Daily Check-in 🌿',
-                                    body:
-                                        'Remember to log your mood, symptoms, and health today.',
-                                  );
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        Icon(
-                                          sent
-                                              ? Icons.check_circle_rounded
-                                              : Icons.warning_amber_rounded,
-                                          color: Colors.white,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            sent
-                                                ? 'Test alert sent to status bar!'
-                                                : 'Could not send test alert. Please check phone permissions.',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor: sent
-                                        ? const Color(0xFF2E7D32)
-                                        : const Color(0xFFD32F2F),
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.notifications_active, size: 16),
-                              label: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  'Send Test Notification Now',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -1123,4 +1055,5 @@ class _ReminderSettingsPageState extends ConsumerState<ReminderSettingsPage> {
     );
   }
 }
+
 

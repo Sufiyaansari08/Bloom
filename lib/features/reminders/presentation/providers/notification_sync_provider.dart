@@ -71,14 +71,14 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idPeriodAlert);
+      NotificationService.instance.cancel(NotificationService.idPeriodTodayAlert);
     }
   }
 
   // 3. Sync Fertile Window Alert
   final fertileReminder = reminderMap['fertile_window'];
   if (fertileReminder != null) {
-    final upcomingFertile = calendarState.fertileDays.where((d) => !d.isBefore(today)).toList();
-    final fertileStart = upcomingFertile.isNotEmpty ? upcomingFertile.first : null;
+    final fertileStart = _findFertileStart(calendarState.fertileDays, today);
 
     if (fertileReminder.isEnabled && fertileStart != null && !isPeriodOngoing) {
       NotificationService.instance.scheduleFertileAlert(
@@ -88,6 +88,7 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idFertileAlert);
+      NotificationService.instance.cancel(NotificationService.idFertileTodayAlert);
     }
   }
 
@@ -103,6 +104,78 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idOvulationAlert);
+      NotificationService.instance.cancel(NotificationService.idOvulationEveAlert);
     }
   }
+
+  // 5. Sync Monthly Cycle Summary & Completed Cycle Notifications
+  final cycleSummaryReminder = reminderMap['cycle_summary'];
+  if (cycleSummaryReminder != null && cycleSummaryReminder.isEnabled) {
+    final cyclesAsync = ref.watch(allCyclesStreamProvider);
+    final cycles = cyclesAsync.value ?? [];
+    final completedCycles = cycles
+        .where((c) => !c.isDeleted && c.endDate != null)
+        .toList();
+    completedCycles.sort((a, b) => b.endDate!.compareTo(a.endDate!));
+
+    if (completedCycles.isNotEmpty) {
+      final newest = completedCycles.first;
+      // If cycle completed recently (within 48 hours) and not yet notified
+      final isRecentlyCompleted =
+          DateTime.now().difference(newest.updatedAt).inHours < 48;
+
+      if (isRecentlyCompleted &&
+          !NotificationService.hasNotifiedCycle(newest.id)) {
+        NotificationService.markCycleNotified(newest.id);
+        NotificationService.instance.showCycleSummaryNotification(
+          isDiscrete: isDiscrete,
+        );
+      }
+    }
+
+    int hour = 10;
+    int minute = 0;
+    try {
+      final parts = cycleSummaryReminder.timeOfDay.split(':');
+      hour = int.parse(parts[0]);
+      minute = int.parse(parts[1]);
+    } catch (_) {}
+
+    NotificationService.instance.scheduleMonthlyCycleSummary(
+      hour: hour,
+      minute: minute,
+      isEnabled: cycleSummaryReminder.isEnabled,
+      isDiscrete: isDiscrete,
+    );
+  } else {
+    NotificationService.instance.cancel(NotificationService.idCycleSummary);
+  }
 });
+
+DateTime? _findFertileStart(List<DateTime> fertileDays, DateTime today) {
+  if (fertileDays.isEmpty) return null;
+
+  final starts = <DateTime>[];
+  for (final day in fertileDays) {
+    final prevDay =
+        DateTime(day.year, day.month, day.day).subtract(const Duration(days: 1));
+    final hasPrev = fertileDays.any((d) =>
+        d.year == prevDay.year &&
+        d.month == prevDay.month &&
+        d.day == prevDay.day);
+    if (!hasPrev) {
+      starts.add(DateTime(day.year, day.month, day.day));
+    }
+  }
+
+  for (final start in starts) {
+    final eve = start.subtract(const Duration(days: 1));
+    final isEveToday =
+        today.year == eve.year && today.month == eve.month && today.day == eve.day;
+    if (!today.isAfter(start) || isEveToday) {
+      return start;
+    }
+  }
+
+  return starts.isNotEmpty ? starts.first : null;
+}

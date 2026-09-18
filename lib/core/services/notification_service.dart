@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -7,7 +10,7 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin =
+  FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
@@ -22,6 +25,9 @@ class NotificationService {
   static const int idFertileAlert = 103;
   static const int idOvulationAlert = 104;
   static const int idCycleSummary = 105;
+  static const int idPeriodTodayAlert = 106;
+  static const int idFertileTodayAlert = 107;
+  static const int idOvulationEveAlert = 108;
   static const int idTest = 999;
 
   void Function(String? payload)? onNotificationTapped;
@@ -38,6 +44,8 @@ class NotificationService {
 
   Future<bool> initialize() async {
     if (_isInitialized) return true;
+
+    await loadNotifiedCycleIds();
 
     try {
       tz_data.initializeTimeZones();
@@ -169,6 +177,7 @@ class NotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: 'ic_notification',
+      visibility: NotificationVisibility.public,
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
@@ -187,7 +196,16 @@ class NotificationService {
     return NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
+      macOS: iosDetails,
+      windows: const WindowsNotificationDetails(),
+      linux: const LinuxNotificationDetails(),
     );
+  }
+
+  @visibleForTesting
+  void setPluginForTesting(FlutterLocalNotificationsPlugin plugin) {
+    _plugin = plugin;
+    _isInitialized = true;
   }
 
   Future<bool> showInstantNotification({
@@ -293,6 +311,91 @@ class NotificationService {
     }
   }
 
+  static final Set<String> _shownTodayKeys = {};
+
+  @visibleForTesting
+  static void resetShownTodayCache() {
+    _shownTodayKeys.clear();
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _showMilestoneIfDueToday({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    final now = DateTime.now();
+    final key = '${now.year}-${now.month}-${now.day}_$id';
+    if (_shownTodayKeys.contains(key)) return;
+    _shownTodayKeys.add(key);
+
+    await showInstantNotification(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+    );
+  }
+
+  Future<void> _scheduleOrShowMilestone({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime targetDate,
+    String? payload,
+  }) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+
+    if (_isSameDay(targetDay, today)) {
+      if (now.hour >= 9) {
+        await _showMilestoneIfDueToday(
+          id: id,
+          title: title,
+          body: body,
+          payload: payload,
+        );
+      } else {
+        final scheduledDate = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month,
+          now.day,
+          9,
+          0,
+        );
+        await _safeZonedSchedule(
+          id: id,
+          title: title,
+          body: body,
+          scheduledDate: scheduledDate,
+          payload: payload,
+        );
+      }
+    } else if (targetDay.isAfter(today)) {
+      final scheduledDate = tz.TZDateTime(
+        tz.local,
+        targetDay.year,
+        targetDay.month,
+        targetDay.day,
+        9,
+        0,
+      );
+      await _safeZonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        payload: payload,
+      );
+    }
+  }
+
   Future<bool> schedulePeriodAlert({
     required DateTime periodDate,
     required int daysBefore,
@@ -305,36 +408,47 @@ class NotificationService {
         if (!ok) return false;
       }
       await _plugin.cancel(id: idPeriodAlert);
+      await _plugin.cancel(id: idPeriodTodayAlert);
 
       if (!isEnabled) return true;
 
-      final targetDate = periodDate.subtract(Duration(days: daysBefore));
-      final scheduledDate = tz.TZDateTime(
-        tz.local,
-        targetDate.year,
-        targetDate.month,
-        targetDate.day,
-        9,
-        0,
+      // 1. Advance reminder (e.g. 1, 2, or 3 days before)
+      if (daysBefore > 0) {
+        final advanceDate = periodDate.subtract(Duration(days: daysBefore));
+        final advanceTitle =
+            isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
+        final advanceBody = isDiscrete
+            ? (daysBefore == 1
+                ? 'You have an upcoming cycle milestone tomorrow.'
+                : 'You have an upcoming cycle milestone in $daysBefore days.')
+            : (daysBefore == 1
+                ? 'Period expected tomorrow.'
+                : 'Period expected in $daysBefore days.');
+
+        await _scheduleOrShowMilestone(
+          id: idPeriodAlert,
+          title: advanceTitle,
+          body: advanceBody,
+          targetDate: advanceDate,
+          payload: '/calendar',
+        );
+      }
+
+      // 2. Day-of period reminder (on expected period start date)
+      final todayTitle =
+          isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
+      final todayBody = isDiscrete
+          ? 'You have an expected cycle milestone today. Tap to view.'
+          : 'Period expected today.';
+
+      await _scheduleOrShowMilestone(
+        id: idPeriodTodayAlert,
+        title: todayTitle,
+        body: todayBody,
+        targetDate: periodDate,
+        payload: '/calendar',
       );
 
-      if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
-
-      final title = isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
-      final body = isDiscrete
-          ? (daysBefore == 0
-              ? 'You have an expected cycle milestone today. Tap to view.'
-              : 'You have an upcoming cycle milestone in $daysBefore ${daysBefore == 1 ? "day" : "days"}.')
-          : (daysBefore == 0
-              ? 'You may get your period today.'
-              : 'Your period is expected in $daysBefore ${daysBefore == 1 ? "day" : "days"}.');
-      await _safeZonedSchedule(
-        id: idPeriodAlert,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        payload: '/reminders',
-      );
       return true;
     } catch (e) {
       debugPrint('Error scheduling period alert notification: $e');
@@ -353,32 +467,41 @@ class NotificationService {
         if (!ok) return false;
       }
       await _plugin.cancel(id: idFertileAlert);
+      await _plugin.cancel(id: idFertileTodayAlert);
 
       if (!isEnabled) return true;
 
-      final targetDate = fertileStart.subtract(const Duration(days: 1));
-      final scheduledDate = tz.TZDateTime(
-        tz.local,
-        targetDate.year,
-        targetDate.month,
-        targetDate.day,
-        9,
-        0,
-      );
+      // 1. Eve reminder: 1 day before fertile window starts
+      final eveDate = fertileStart.subtract(const Duration(days: 1));
+      final eveTitle =
+          isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
+      final eveBody = isDiscrete
+          ? 'A new cycle phase begins tomorrow. Tap to view in Bloom.'
+          : 'Fertile window is expected to start tomorrow.';
 
-      if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
-
-      final title = isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
-      final body = isDiscrete
-          ? 'A new phase update is ready in Bloom. Tap to check your insights.'
-          : 'Your fertile window begins tomorrow.';
-      await _safeZonedSchedule(
+      await _scheduleOrShowMilestone(
         id: idFertileAlert,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        payload: '/reminders',
+        title: eveTitle,
+        body: eveBody,
+        targetDate: eveDate,
+        payload: '/calendar',
       );
+
+      // 2. Day-of reminder: on fertile window start day
+      final todayTitle =
+          isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
+      final todayBody = isDiscrete
+          ? 'A new phase update is ready in Bloom. Tap to check your insights.'
+          : 'Fertile window is expected to start today.';
+
+      await _scheduleOrShowMilestone(
+        id: idFertileTodayAlert,
+        title: todayTitle,
+        body: todayBody,
+        targetDate: fertileStart,
+        payload: '/calendar',
+      );
+
       return true;
     } catch (e) {
       debugPrint('Error scheduling fertile alert notification: $e');
@@ -397,34 +520,166 @@ class NotificationService {
         if (!ok) return false;
       }
       await _plugin.cancel(id: idOvulationAlert);
+      await _plugin.cancel(id: idOvulationEveAlert);
 
       if (!isEnabled) return true;
 
-      final scheduledDate = tz.TZDateTime(
-        tz.local,
-        ovulationDate.year,
-        ovulationDate.month,
-        ovulationDate.day,
-        9,
-        0,
+      // 1. Eve reminder: 1 day before ovulation
+      final eveDate = ovulationDate.subtract(const Duration(days: 1));
+      final eveTitle =
+          isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Alert';
+      final eveBody = isDiscrete
+          ? 'An important cycle milestone is predicted for tomorrow.'
+          : 'Ovulation expected tomorrow.';
+
+      await _scheduleOrShowMilestone(
+        id: idOvulationEveAlert,
+        title: eveTitle,
+        body: eveBody,
+        targetDate: eveDate,
+        payload: '/calendar',
       );
 
-      if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return true;
-
-      final title = isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Day Alert';
-      final body = isDiscrete
+      // 2. Day-of reminder: on ovulation day
+      final todayTitle =
+          isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Day Alert';
+      final todayBody = isDiscrete
           ? 'New daily insight ready for you in Bloom.'
-          : 'Today is your predicted ovulation day.';
-      await _safeZonedSchedule(
+          : 'Ovulation is expected today.';
+
+      await _scheduleOrShowMilestone(
         id: idOvulationAlert,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        payload: '/reminders',
+        title: todayTitle,
+        body: todayBody,
+        targetDate: ovulationDate,
+        payload: '/calendar',
       );
+
       return true;
     } catch (e) {
       debugPrint('Error scheduling ovulation alert notification: $e');
+      return false;
+    }
+  }
+
+  static final Set<String> _notifiedCycleIds = {};
+  static bool _prefsLoaded = false;
+
+  static bool hasNotifiedCycle(String cycleId) {
+    return _notifiedCycleIds.contains(cycleId);
+  }
+
+  static void markCycleNotified(String cycleId) {
+    _notifiedCycleIds.add(cycleId);
+    _persistNotifiedCycleIds();
+  }
+
+  static Future<void> loadNotifiedCycleIds() async {
+    if (_prefsLoaded) return;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/cycle_notif_cache.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> list = jsonDecode(content);
+        _notifiedCycleIds.addAll(list.map((e) => e.toString()));
+      }
+      _prefsLoaded = true;
+    } catch (_) {}
+  }
+
+  static Future<void> _persistNotifiedCycleIds() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/cycle_notif_cache.json');
+      await file.writeAsString(jsonEncode(_notifiedCycleIds.toList()), flush: true);
+    } catch (_) {}
+  }
+
+  @visibleForTesting
+  static void resetNotifiedCyclesCache() {
+    _notifiedCycleIds.clear();
+    _prefsLoaded = true;
+  }
+
+  Future<bool> showCycleSummaryNotification({
+    bool isDiscrete = false,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        final ok = await initialize();
+        if (!ok) return false;
+      }
+      final title =
+          isDiscrete ? 'Wellness Insights 🌿' : 'Monthly Cycle Summary';
+      final body = isDiscrete
+          ? 'Your latest wellness summary is ready in Bloom.'
+          : 'Your cycle summary and insights are ready. Tap to view your cycle trends.';
+
+      return await showInstantNotification(
+        id: idCycleSummary,
+        title: title,
+        body: body,
+        payload: '/insights',
+      );
+    } catch (e) {
+      debugPrint('Error showing cycle summary notification: $e');
+      return false;
+    }
+  }
+
+  Future<bool> scheduleMonthlyCycleSummary({
+    required int hour,
+    required int minute,
+    required bool isEnabled,
+    bool isDiscrete = false,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        final ok = await initialize();
+        if (!ok) return false;
+      }
+      await _plugin.cancel(id: idCycleSummary);
+
+      if (!isEnabled) return true;
+
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        1,
+        hour,
+        minute,
+      );
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month + 1,
+          1,
+          hour,
+          minute,
+        );
+      }
+
+      final title =
+          isDiscrete ? 'Wellness Insights 🌿' : 'Monthly Cycle Summary';
+      final body = isDiscrete
+          ? 'Your latest wellness summary is ready in Bloom.'
+          : 'Your cycle summary and insights are ready. Tap to view your cycle trends.';
+
+      await _safeZonedSchedule(
+        id: idCycleSummary,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        payload: '/insights',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error scheduling monthly cycle summary notification: $e');
       return false;
     }
   }

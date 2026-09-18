@@ -1,19 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:bloom/features/period_logging/presentation/widgets/period_flow_pain_bottom_sheet.dart';
+import '../providers/home_provider.dart';
 
-class QuickActionsGrid extends StatelessWidget {
+class QuickActionsGrid extends ConsumerWidget {
   const QuickActionsGrid({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final homeState = ref.watch(homeProvider);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _QuickAction(
           icon: Icons.water_drop_outlined,
           label: 'Log Period',
-          onTap: () => context.push('/period_logging/start'),
+          onTap: () {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final cycleDay = homeState.isPeriodOngoing
+                ? homeState.periodDay
+                : (homeState.cycleDay > 0 ? homeState.cycleDay : null);
+
+            showPeriodFlowPainSheet(
+              context: context,
+              ref: ref,
+              date: today,
+              cycleDay: cycleDay,
+              showDisclaimer: true,
+            );
+          },
         ),
         _QuickAction(
           icon: Icons.add_box_outlined,

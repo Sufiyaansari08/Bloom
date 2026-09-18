@@ -71,6 +71,13 @@ class DailyLogRepository {
         .watch();
   }
 
+  Future<List<DailyLog>> getAllDailyLogs() async {
+    return (_db.select(_db.dailyLogs)
+          ..where((t) => t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm(expression: t.date, mode: OrderingMode.asc)]))
+        .get();
+  }
+
   Future<void> upsertDailyLog(DailyLogsCompanion log) async {
     await _db.into(_db.dailyLogs).insertOnConflictUpdate(log);
   }

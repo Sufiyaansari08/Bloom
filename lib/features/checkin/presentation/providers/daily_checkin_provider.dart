@@ -5,6 +5,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_providers.dart';
 
 class DailyCheckinState {
+  final DateTime? targetDate;
+  final bool fromCalendar;
   final String? mood; // Great, Good, Okay, Not great, Bad
   final List<String> symptoms;
   final Map<String, int> symptomRatings;
@@ -17,6 +19,8 @@ class DailyCheckinState {
   final String notes;
 
   DailyCheckinState({
+    this.targetDate,
+    this.fromCalendar = false,
     this.mood,
     this.symptoms = const [],
     this.symptomRatings = const {},
@@ -30,6 +34,8 @@ class DailyCheckinState {
   });
 
   DailyCheckinState copyWith({
+    DateTime? targetDate,
+    bool? fromCalendar,
     String? mood,
     List<String>? symptoms,
     Map<String, int>? symptomRatings,
@@ -42,6 +48,8 @@ class DailyCheckinState {
     String? notes,
   }) {
     return DailyCheckinState(
+      targetDate: targetDate ?? this.targetDate,
+      fromCalendar: fromCalendar ?? this.fromCalendar,
       mood: mood ?? this.mood,
       symptoms: symptoms ?? this.symptoms,
       symptomRatings: symptomRatings ?? this.symptomRatings,
@@ -61,6 +69,52 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
   static const _uuid = Uuid();
 
   DailyCheckinNotifier(this._ref) : super(DailyCheckinState());
+
+  void setTargetDate(DateTime? date, {bool fromCalendar = false}) {
+    state = state.copyWith(
+      targetDate: date,
+      fromCalendar: fromCalendar,
+    );
+  }
+
+  void loadFromLog(DailyLog log, List<DailySymptom> symptoms) {
+    final Map<String, int> symptomRatings = {};
+    final List<String> symptomNames = [];
+    for (final s in symptoms) {
+      symptomNames.add(s.symptomName);
+      if (s.severity != null) {
+        symptomRatings[s.symptomName] = s.severity!;
+      }
+    }
+
+    final remediesList = log.remedies != null && log.remedies!.isNotEmpty
+        ? log.remedies!.split(', ').map((r) => r.trim()).toList()
+        : <String>[];
+
+    String? sleepStr;
+    if (log.sleepHours != null) {
+      final hours = log.sleepHours!.floor();
+      final mins = ((log.sleepHours! - hours) * 60).round();
+      if (mins > 0) {
+        sleepStr = '$hours h $mins m';
+      } else {
+        sleepStr = '$hours h';
+      }
+    }
+
+    state = state.copyWith(
+      mood: log.mood,
+      symptoms: symptomNames,
+      symptomRatings: symptomRatings,
+      sleep: sleepStr,
+      waterIntake: log.waterIntake,
+      activity: log.activityLevel,
+      stressLevel: log.stressLevel ?? 5,
+      remedies: remediesList,
+      painAfter1Hour: log.painAfter1Hr ?? 5,
+      notes: log.notes ?? '',
+    );
+  }
 
   void setMood(String mood) {
     state = state.copyWith(mood: mood);
@@ -149,7 +203,8 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
     return double.tryParse(sleepStr.replaceAll(RegExp(r'[^\d.]'), ''));
   }
 
-  Future<void> saveToDatabase(DateTime date) async {
+  Future<void> saveToDatabase([DateTime? date]) async {
+    final effectiveDate = date ?? state.targetDate ?? DateTime.now();
     final logRepo = _ref.read(dailyLogRepositoryProvider);
     final symptomRepo = _ref.read(symptomRepositoryProvider);
     final userRepo = _ref.read(userRepositoryProvider);
@@ -159,7 +214,7 @@ class DailyCheckinNotifier extends StateNotifier<DailyCheckinState> {
     final userId = user?.id ?? _uuid.v4();
     final currentCycle = await cycleRepo.getCurrentCycle();
 
-    final cleanDate = DateTime(date.year, date.month, date.day);
+    final cleanDate = DateTime(effectiveDate.year, effectiveDate.month, effectiveDate.day);
     final existingLog = await logRepo.getLogForDate(cleanDate);
     final logId = existingLog?.id ?? _uuid.v4();
     final sleepHours = _parseSleep(state.sleep);

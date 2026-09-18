@@ -73,4 +73,21 @@ class CycleRepository {
       ),
     );
   }
+
+  Future<void> reopenCycle(String cycleId) async {
+    await (_db.update(_db.cycles)..where((t) => t.id.equals(cycleId))).write(
+      const CyclesCompanion(
+        endDate: Value(null),
+        cycleLength: Value(null),
+      ),
+    );
+  }
+
+  Future<Cycle?> getPreviousCompletedCycle() async {
+    return (_db.select(_db.cycles)
+          ..where((t) => t.isDeleted.equals(false) & t.endDate.isNotNull())
+          ..orderBy([(t) => OrderingTerm(expression: t.startDate, mode: OrderingMode.desc)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
 }

@@ -10,6 +10,8 @@ import '../../../../core/database/app_database.dart';
 import '../providers/calendar_provider.dart';
 import '../widgets/bloom_calendar.dart';
 import '../widgets/daily_summary_card.dart';
+import 'package:bloom/features/period_logging/presentation/widgets/period_flow_pain_bottom_sheet.dart';
+import 'package:bloom/features/checkin/presentation/providers/daily_checkin_provider.dart';
 
 class CalendarPage extends ConsumerWidget {
   const CalendarPage({super.key});
@@ -67,6 +69,9 @@ class CalendarPage extends ConsumerWidget {
     final isPeriodDay = state.periodDays.any((d) => isSameDay(d, state.selectedDay)) ||
         (isPeriodPredictionEnabled && state.expectedPeriodDays.any((d) => isSameDay(d, state.selectedDay)));
     final isFertileDay = isFertileWindowEnabled && state.fertileDays.any((d) => isSameDay(d, state.selectedDay));
+    final isOvulationDay = isOvulationEnabled &&
+        ((state.ovulationDay != null && isSameDay(state.ovulationDay!, state.selectedDay)) ||
+            state.ovulationDays.any((d) => isSameDay(d, state.selectedDay)));
 
     final showPeriodSummary = isPeriodPredictionEnabled && state.expectedPeriodDays.isNotEmpty;
     final showFertileSummary = isFertileWindowEnabled && state.fertileDays.isNotEmpty;
@@ -180,6 +185,7 @@ class CalendarPage extends ConsumerWidget {
                 isLoggedPeriodDay: isLoggedPeriodDay,
                 loggedFlow: loggedFlow,
                 isFertileDay: isFertileDay,
+                isOvulationDay: isOvulationDay,
                 cycleDay: cycleDayForSelected,
                 isCycleStart: isCycleStartForSelected,
                 isPeriodLate: state.isPeriodLate,
@@ -190,10 +196,11 @@ class CalendarPage extends ConsumerWidget {
                 onSetAsPeriodStart: () => _handleSetAsPeriodStart(context, ref, state.selectedDay),
                 onChangePeriodDate: () => _handleChangePeriodDate(context, ref, state.selectedDay),
                 onRemovePeriod: () => _handleRemovePeriod(context, ref, state.selectedDay),
+                onCheckinForDay: () => _handleCheckinForDay(context, ref, state.selectedDay),
               ),
               const SizedBox(height: 32),
               Text(
-                'Menstrual Summary',
+                'Upcoming Menstrual Summary',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 18,
@@ -372,123 +379,13 @@ class CalendarPage extends ConsumerWidget {
 
   Future<void> _handleLogPeriodForDay(BuildContext context, WidgetRef ref, DateTime date, int? cycleDay) async {
     final cleanDate = DateTime(date.year, date.month, date.day);
-    final user = ref.read(userProfileStreamProvider).value;
-    final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
-    final cycleRepo = ref.read(cycleRepositoryProvider);
-    final currentCycle = ref.read(currentCycleStreamProvider).value;
-    final isPeriodLate = ref.read(calendarProvider).isPeriodLate;
-
-    final selectedFlow = await showModalBottomSheet<String>(
+    await showPeriodFlowPainSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      backgroundColor: Colors.white,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Log Flow for ${cycleDay != null ? "Day $cycleDay" : DateFormat("MMM d").format(cleanDate)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.text),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20, color: AppColors.secondaryText),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...['Spotting', 'Light', 'Medium', 'Heavy', 'Very heavy'].map((flow) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(vertical: 2),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryPink.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.water_drop, color: AppColors.primaryPink, size: 18),
-              ),
-              title: Text(flow, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.text)),
-              trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
-              onTap: () => Navigator.of(ctx).pop(flow),
-            )),
-          ],
-        ),
-      ),
+      ref: ref,
+      date: cleanDate,
+      cycleDay: cycleDay,
+      showDisclaimer: false,
     );
-
-    if (selectedFlow == null) return;
-
-    String? cycleId = currentCycle?.id;
-
-    // If period was late or this is >=15 days after current cycle start, this is Day 1 of a NEW cycle!
-    if (currentCycle != null) {
-      final dayDiff = cleanDate.difference(currentCycle.startDate).inDays;
-      if (isPeriodLate || dayDiff >= 15) {
-        // Complete the previous overdue cycle
-        await cycleRepo.completeCycle(
-          currentCycle.id,
-          cleanDate.subtract(const Duration(days: 1)),
-          dayDiff > 0 ? dayDiff : (user?.avgCycleLength ?? 29),
-          currentCycle.periodLength ?? user?.avgPeriodLength ?? 5,
-        );
-
-        // Start new cycle with cleanDate as Day 1
-        final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
-        await cycleRepo.insertCycle(
-          CyclesCompanion.insert(
-            id: newCycleId,
-            userId: user?.id ?? 'default_user',
-            startDate: cleanDate,
-            cycleLength: drift.Value(user?.avgCycleLength ?? 29),
-            periodLength: drift.Value(user?.avgPeriodLength ?? 5),
-          ),
-        );
-        cycleId = newCycleId;
-      }
-    } else {
-      final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
-      await cycleRepo.insertCycle(
-        CyclesCompanion.insert(
-          id: newCycleId,
-          userId: user?.id ?? 'default_user',
-          startDate: cleanDate,
-          cycleLength: drift.Value(user?.avgCycleLength ?? 29),
-          periodLength: drift.Value(user?.avgPeriodLength ?? 5),
-        ),
-      );
-      cycleId = newCycleId;
-    }
-
-    final existingLog = await dailyLogRepo.getLogForDate(cleanDate);
-    final logId = existingLog?.id ?? '${cleanDate.millisecondsSinceEpoch}_log';
-    await dailyLogRepo.upsertDailyLog(
-      DailyLogsCompanion(
-        id: drift.Value(logId),
-        userId: drift.Value(user?.id ?? existingLog?.userId ?? 'default_user'),
-        cycleId: drift.Value(cycleId),
-        date: drift.Value(cleanDate),
-        flowIntensity: drift.Value(selectedFlow),
-      ),
-    );
-
-    if (context.mounted) {
-      final label = cycleDay != null ? 'Day $cycleDay ($selectedFlow)' : '${DateFormat('MMM d').format(cleanDate)} ($selectedFlow)';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Period flow logged for $label'),
-          backgroundColor: AppColors.primaryPink,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
   }
 
   Future<void> _handleSetAsPeriodStart(BuildContext context, WidgetRef ref, DateTime date) async {
@@ -618,7 +515,54 @@ class CalendarPage extends ConsumerWidget {
 
     if (confirm == true) {
       final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+      final cycleRepo = ref.read(cycleRepositoryProvider);
+
+      // 1. Remove flow from daily_logs for that date
       await dailyLogRepo.removePeriodFlowForDate(cleanDate);
+
+      // 2. Fetch remaining period logs
+      final allDailyLogs = await dailyLogRepo.getAllDailyLogs();
+      final remainingPeriodLogs = allDailyLogs.where((l) {
+        final d = DateTime(l.date.year, l.date.month, l.date.day);
+        return !DateUtils.isSameDay(d, cleanDate) &&
+            l.flowIntensity != null &&
+            l.flowIntensity != 'None' &&
+            l.flowIntensity!.isNotEmpty;
+      }).toList();
+
+      // 3. Check current cycle
+      final currentCycle = await cycleRepo.getCurrentCycle();
+      if (currentCycle != null) {
+        final cleanCycleStart = DateTime(
+          currentCycle.startDate.year,
+          currentCycle.startDate.month,
+          currentCycle.startDate.day,
+        );
+
+        // If the date being removed was the start of the current cycle:
+        if (DateUtils.isSameDay(cleanDate, cleanCycleStart)) {
+          // Check if there are other period logs in this cycle (within 14 days after start)
+          final otherLogsInCycle = remainingPeriodLogs.where((l) {
+            final d = DateTime(l.date.year, l.date.month, l.date.day);
+            final diff = d.difference(cleanCycleStart).inDays;
+            return diff > 0 && diff < 15;
+          }).toList()
+            ..sort((a, b) => a.date.compareTo(b.date));
+
+          if (otherLogsInCycle.isNotEmpty) {
+            // Move cycle start to the next earliest period date in this cycle
+            await cycleRepo.updateCycleStartDate(currentCycle.id, otherLogsInCycle.first.date);
+          } else {
+            // No other period logs in this cycle! The cycle was started solely by this removed log.
+            // Delete this cycle and reopen the previous completed cycle if one exists.
+            final prevCycle = await cycleRepo.getPreviousCompletedCycle();
+            await cycleRepo.deleteCycle(currentCycle.id);
+            if (prevCycle != null) {
+              await cycleRepo.reopenCycle(prevCycle.id);
+            }
+          }
+        }
+      }
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -630,6 +574,27 @@ class CalendarPage extends ConsumerWidget {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _handleCheckinForDay(BuildContext context, WidgetRef ref, DateTime date) async {
+    final cleanDate = DateTime(date.year, date.month, date.day);
+    final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
+    final symptomRepo = ref.read(symptomRepositoryProvider);
+
+    // Clear previous check-in state and set target date with fromCalendar = true
+    ref.read(dailyCheckinProvider.notifier).clear();
+    ref.read(dailyCheckinProvider.notifier).setTargetDate(cleanDate, fromCalendar: true);
+
+    // Pre-populate if a log already exists
+    final existingLog = await dailyLogRepo.getLogForDate(cleanDate);
+    if (existingLog != null) {
+      final symptoms = await symptomRepo.getSymptomsForLog(existingLog.id);
+      ref.read(dailyCheckinProvider.notifier).loadFromLog(existingLog, symptoms);
+    }
+
+    if (context.mounted) {
+      context.push('/checkin/mood', extra: {'date': cleanDate});
     }
   }
 }

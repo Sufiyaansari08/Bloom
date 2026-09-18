@@ -6,6 +6,7 @@ import '../../../../shared/widgets/bloom_app_bar.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 import '../../../../shared/widgets/bloom_emoticon_picker.dart';
 import '../../../../shared/widgets/bloom_grid_item.dart';
+import 'package:intl/intl.dart';
 import '../providers/daily_checkin_provider.dart';
 
 class CheckinMoodPage extends ConsumerWidget {
@@ -28,6 +29,21 @@ class CheckinMoodPage extends ConsumerWidget {
     final selectedMood = state.mood;
     final selectedSymptoms = state.symptoms;
 
+    final extra = GoRouterState.of(context).extra as Map<String, dynamic>?;
+    final extraDate = extra?['date'] as DateTime?;
+    final targetDate = state.targetDate ?? extraDate ?? DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final cleanTarget = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final isToday = cleanTarget.isAtSameMomentAs(today);
+    final isYesterday = cleanTarget.isAtSameMomentAs(today.subtract(const Duration(days: 1)));
+
+    final titleText = isToday
+        ? 'How are you feeling today?'
+        : (isYesterday
+            ? 'How did you feel yesterday?'
+            : 'How did you feel on ${DateFormat('MMM d').format(cleanTarget)}?');
+
     return Scaffold(
       appBar: const BloomAppBar(progress: 0.2),
       body: SafeArea(
@@ -37,11 +53,29 @@ class CheckinMoodPage extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'How are you feeling today?',
+                titleText,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontSize: 24,
                     ),
               ),
+              if (!isToday) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightPurple,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${isYesterday ? "Yesterday • " : ""}${DateFormat('EEEE, MMM d').format(cleanTarget)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryPurple,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               BloomEmoticonPicker(
                 selectedMood: selectedMood,

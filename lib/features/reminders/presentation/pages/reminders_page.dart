@@ -530,6 +530,7 @@ class RemindersPage extends ConsumerWidget {
     String title;
     String description;
     bool isCompleted = false;
+    bool showDueToday = false;
     String? actionLabel;
     VoidCallback? onAction;
 
@@ -540,12 +541,16 @@ class RemindersPage extends ConsumerWidget {
         title = 'Expected period alert';
         if (isPeriodLate) {
           description = 'Your period is $daysLate ${daysLate == 1 ? "day" : "days"} late.';
+          showDueToday = true;
         } else if (daysUntilPeriod <= 0) {
           description = 'You may get your period today.';
+          showDueToday = true;
         } else if (daysUntilPeriod == 1) {
           description = 'You may get your period tomorrow.';
+          showDueToday = false;
         } else {
           description = 'You may get your period in $daysUntilPeriod days.';
+          showDueToday = false;
         }
         actionLabel = 'View Calendar';
         onAction = () => context.go('/calendar');
@@ -555,6 +560,7 @@ class RemindersPage extends ConsumerWidget {
         icon = Icons.auto_awesome;
         color = const Color(0xFFF4C059);
         title = 'Ovulation reminder';
+        showDueToday = false;
         if (daysUntilOvulation <= 0) {
           description = 'Today is your predicted ovulation day.';
         } else if (daysUntilOvulation == 1) {
@@ -570,6 +576,7 @@ class RemindersPage extends ConsumerWidget {
         icon = Icons.spa_outlined;
         color = const Color(0xFF2E7D32);
         title = 'Fertile window reminder';
+        showDueToday = false;
         if (daysUntilFertile == 1 && fertileStart != null) {
           description = 'Your fertile window begins tomorrow (${DateFormat('MMM d').format(fertileStart)}).';
         } else if (daysUntilOvulation == 0) {
@@ -588,6 +595,7 @@ class RemindersPage extends ConsumerWidget {
           title = 'Daily check-in completed';
           description = "You've already logged your health data for today. Great job keeping your cycle tracking up to date!";
           isCompleted = true;
+          showDueToday = false;
           actionLabel = 'Edit Check-in';
           onAction = () => context.push('/checkin/mood');
         } else {
@@ -596,6 +604,7 @@ class RemindersPage extends ConsumerWidget {
           title = 'Daily check-in reminder';
           description = 'Remember to log your mood, flow, and symptoms for today.';
           isCompleted = false;
+          showDueToday = true;
           actionLabel = 'Log Check-in Now';
           onAction = () => context.push('/checkin/mood');
         }
@@ -607,6 +616,7 @@ class RemindersPage extends ConsumerWidget {
         color = const Color(0xFF1E88E5);
         title = 'Monthly cycle summary';
         description = 'Your cycle summary and personalized insights are ready.';
+        showDueToday = false;
         actionLabel = 'View Insights';
         onAction = () => context.push('/insights');
         break;
@@ -621,6 +631,7 @@ class RemindersPage extends ConsumerWidget {
       icon: icon,
       color: color,
       isCompleted: isCompleted,
+      showDueToday: showDueToday,
       actionLabel: actionLabel,
       onAction: onAction,
     );
@@ -739,7 +750,7 @@ class _ReminderCardWidgetState extends State<_ReminderCardWidget> {
                               ],
                             ),
                           )
-                        else
+                        else if (item.showDueToday)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -818,6 +829,7 @@ class _ReminderDisplayItem {
   final IconData icon;
   final Color color;
   final bool isCompleted;
+  final bool showDueToday;
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -830,6 +842,7 @@ class _ReminderDisplayItem {
     required this.icon,
     required this.color,
     this.isCompleted = false,
+    this.showDueToday = false,
     this.actionLabel,
     this.onAction,
   });

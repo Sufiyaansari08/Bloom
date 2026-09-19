@@ -11,6 +11,7 @@ class DailySummaryCard extends StatelessWidget {
   final bool isFertileDay;
   final bool isOvulationDay;
   final int? cycleDay;
+  final int? periodDay;
   final bool isCycleStart;
   final bool isPeriodLate;
   final int daysLate;
@@ -31,6 +32,7 @@ class DailySummaryCard extends StatelessWidget {
     required this.isFertileDay,
     this.isOvulationDay = false,
     this.cycleDay,
+    this.periodDay,
     this.isCycleStart = false,
     this.isPeriodLate = false,
     this.daysLate = 0,
@@ -63,7 +65,8 @@ class DailySummaryCard extends StatelessWidget {
         iconColor = AppColors.primaryPink;
         icon = Icons.hourglass_top_rounded;
       } else if (isPeriodDay) {
-        statusTitle = cycleDay != null ? 'Period Day $cycleDay' : 'Period Day';
+        final displayPeriodDay = periodDay ?? (isLoggedPeriodDay ? cycleDay : null);
+        statusTitle = displayPeriodDay != null ? 'Period Day $displayPeriodDay' : 'Period Day';
         statusSubtitle = isLoggedPeriodDay
             ? 'Flow logged: ${loggedFlow ?? "Period logged"}'
             : 'Predicted period day';
@@ -208,8 +211,8 @@ class DailySummaryCard extends StatelessWidget {
                           label: Text(
                             isPeriodLate
                                 ? 'Log Period for Today'
-                                : (cycleDay != null
-                                      ? 'Log Day $cycleDay'
+                                : (periodDay != null
+                                      ? 'Log Day $periodDay'
                                       : 'Log Period'),
                             style: const TextStyle(
                               fontSize: 12,
@@ -575,12 +578,17 @@ class DailySummaryCard extends StatelessWidget {
     // 4. Quick Action to set/move Period Start or log flow
     if (!isPeriodDay &&
         (onLogPeriodForDay != null || onSetAsPeriodStart != null)) {
+      final String periodActionTitle = periodDay != null
+          ? 'Log Period (Day $periodDay)'
+          : 'Log Period';
+      final String periodActionSubtitle = periodDay != null
+          ? 'Record bleeding/flow for Day $periodDay'
+          : 'Record bleeding/flow for this date';
+
       cards.add(const SizedBox(height: 12));
       cards.add(
         InkWell(
-          onTap: (cycleDay != null && !isCycleStart)
-              ? onLogPeriodForDay
-              : onSetAsPeriodStart,
+          onTap: onLogPeriodForDay ?? onSetAsPeriodStart,
           borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -611,9 +619,7 @@ class DailySummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        (cycleDay != null && !isCycleStart)
-                            ? 'Log Period (Day $cycleDay)'
-                            : 'Set as Period Start (Day 1)',
+                        periodActionTitle,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -622,9 +628,7 @@ class DailySummaryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        (cycleDay != null && !isCycleStart)
-                            ? 'Record bleeding/flow for Day $cycleDay'
-                            : 'Mark this date as the start of your cycle',
+                        periodActionSubtitle,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.secondaryText,

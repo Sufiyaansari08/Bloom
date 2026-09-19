@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:drift/drift.dart' as drift;
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
-import '../../../../core/database/app_database.dart';
 import '../providers/calendar_provider.dart';
 import '../widgets/bloom_calendar.dart';
 import '../widgets/daily_summary_card.dart';
@@ -38,31 +36,74 @@ class CalendarPage extends ConsumerWidget {
     final isLoggedPeriodDay = logWithFlow != null;
     final loggedFlow = logWithFlow?.flowIntensity;
 
-    final currentCycleAsync = ref.watch(currentCycleStreamProvider);
     final allCyclesAsync = ref.watch(allCyclesStreamProvider);
-    final currentCycle = currentCycleAsync.value;
     final allCycles = allCyclesAsync.value ?? [];
-
-    DateTime? referenceCycleStart;
-    if (currentCycle != null) {
-      referenceCycleStart = currentCycle.startDate;
-    } else if (allCycles.isNotEmpty) {
-      referenceCycleStart = allCycles.first.startDate;
-    }
 
     int? cycleDayForSelected;
     bool isCycleStartForSelected = false;
 
-    if (referenceCycleStart != null) {
-      final cleanCycleStart = DateTime(
-        referenceCycleStart.year,
-        referenceCycleStart.month,
-        referenceCycleStart.day,
+    // Check all recorded cycles to see if selectedDay falls within any cycle
+    for (final cycle in allCycles) {
+      final cleanStart = DateTime(
+        cycle.startDate.year,
+        cycle.startDate.month,
+        cycle.startDate.day,
       );
-      final daysDiff = selectedDayClean.difference(cleanCycleStart).inDays;
-      if (daysDiff >= 0) {
-        cycleDayForSelected = daysDiff + 1;
-        isCycleStartForSelected = (daysDiff == 0);
+      if (cycle.endDate != null) {
+        final cleanEnd = DateTime(
+          cycle.endDate!.year,
+          cycle.endDate!.month,
+          cycle.endDate!.day,
+        );
+        if (!selectedDayClean.isBefore(cleanStart) && !selectedDayClean.isAfter(cleanEnd)) {
+          final diff = selectedDayClean.difference(cleanStart).inDays;
+          cycleDayForSelected = diff + 1;
+          isCycleStartForSelected = (diff == 0);
+          break;
+        }
+      } else {
+        // Ongoing cycle
+        if (!selectedDayClean.isBefore(cleanStart)) {
+          final diff = selectedDayClean.difference(cleanStart).inDays;
+          cycleDayForSelected = diff + 1;
+          isCycleStartForSelected = (diff == 0);
+          break;
+        }
+      }
+    }
+
+    int? periodDayForSelected;
+    if (isLoggedPeriodDay) {
+      int count = 1;
+      DateTime check = selectedDayClean.subtract(const Duration(days: 1));
+      while (allDailyLogs.any((l) =>
+          DateUtils.isSameDay(l.date, check) &&
+          l.flowIntensity != null &&
+          l.flowIntensity != 'None' &&
+          l.flowIntensity!.isNotEmpty)) {
+        count++;
+        check = check.subtract(const Duration(days: 1));
+      }
+      periodDayForSelected = count;
+    } else {
+      DateTime prevDay = selectedDayClean.subtract(const Duration(days: 1));
+      final prevHadFlow = allDailyLogs.any((l) =>
+          DateUtils.isSameDay(l.date, prevDay) &&
+          l.flowIntensity != null &&
+          l.flowIntensity != 'None' &&
+          l.flowIntensity!.isNotEmpty);
+      if (prevHadFlow) {
+        int count = 2;
+        DateTime check = prevDay.subtract(const Duration(days: 1));
+        while (allDailyLogs.any((l) =>
+            DateUtils.isSameDay(l.date, check) &&
+            l.flowIntensity != null &&
+            l.flowIntensity != 'None' &&
+            l.flowIntensity!.isNotEmpty)) {
+          count++;
+          check = check.subtract(const Duration(days: 1));
+        }
+        periodDayForSelected = count;
       }
     }
 
@@ -187,13 +228,14 @@ class CalendarPage extends ConsumerWidget {
                 isFertileDay: isFertileDay,
                 isOvulationDay: isOvulationDay,
                 cycleDay: cycleDayForSelected,
+                periodDay: periodDayForSelected,
                 isCycleStart: isCycleStartForSelected,
                 isPeriodLate: state.isPeriodLate,
                 daysLate: state.daysLate,
                 expectedPeriodDate: state.nextPeriodStartDate,
                 checkinData: ref.watch(dailyCheckinForSelectedDayProvider).value,
-                onLogPeriodForDay: () => _handleLogPeriodForDay(context, ref, state.selectedDay, cycleDayForSelected),
-                onSetAsPeriodStart: () => _handleSetAsPeriodStart(context, ref, state.selectedDay),
+                onLogPeriodForDay: () => _handleLogPeriodForDay(context, ref, state.selectedDay, periodDayForSelected ?? 1),
+                onSetAsPeriodStart: () => _handleLogPeriodForDay(context, ref, state.selectedDay, periodDayForSelected ?? 1),
                 onChangePeriodDate: () => _handleChangePeriodDate(context, ref, state.selectedDay),
                 onRemovePeriod: () => _handleRemovePeriod(context, ref, state.selectedDay),
                 onCheckinForDay: () => _handleCheckinForDay(context, ref, state.selectedDay),
@@ -386,60 +428,6 @@ class CalendarPage extends ConsumerWidget {
       cycleDay: cycleDay,
       showDisclaimer: false,
     );
-  }
-
-  Future<void> _handleSetAsPeriodStart(BuildContext context, WidgetRef ref, DateTime date) async {
-    final cleanDate = DateTime(date.year, date.month, date.day);
-    final user = ref.read(userProfileStreamProvider).value;
-    final cycleRepo = ref.read(cycleRepositoryProvider);
-    final currentCycle = ref.read(currentCycleStreamProvider).value;
-    final isPeriodLate = ref.read(calendarProvider).isPeriodLate;
-
-    if (currentCycle != null) {
-      final dayDiff = cleanDate.difference(currentCycle.startDate).inDays;
-      if (isPeriodLate || dayDiff >= 15) {
-        await cycleRepo.completeCycle(
-          currentCycle.id,
-          cleanDate.subtract(const Duration(days: 1)),
-          dayDiff > 0 ? dayDiff : (user?.avgCycleLength ?? 29),
-          currentCycle.periodLength ?? user?.avgPeriodLength ?? 5,
-        );
-        final cycleId = DateTime.now().millisecondsSinceEpoch.toString();
-        await cycleRepo.insertCycle(
-          CyclesCompanion.insert(
-            id: cycleId,
-            userId: user?.id ?? 'default_user',
-            startDate: cleanDate,
-            cycleLength: drift.Value(user?.avgCycleLength ?? 29),
-            periodLength: drift.Value(user?.avgPeriodLength ?? 5),
-          ),
-        );
-      } else {
-        await cycleRepo.updateCycleStartDate(currentCycle.id, cleanDate);
-      }
-    } else if (user != null) {
-      final cycleId = DateTime.now().millisecondsSinceEpoch.toString();
-      await cycleRepo.insertCycle(
-        CyclesCompanion.insert(
-          id: cycleId,
-          userId: user.id,
-          startDate: cleanDate,
-          cycleLength: drift.Value(user.avgCycleLength),
-          periodLength: drift.Value(user.avgPeriodLength),
-        ),
-      );
-    }
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Period start set to ${DateFormat('EEEE, MMM d').format(cleanDate)} (Cycle Day 1)'),
-          backgroundColor: AppColors.primaryPink,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
   }
 
   Future<void> _handleChangePeriodDate(BuildContext context, WidgetRef ref, DateTime oldDate) async {

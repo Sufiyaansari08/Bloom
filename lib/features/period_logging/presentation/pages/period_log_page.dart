@@ -163,52 +163,12 @@ class PeriodLogPage extends ConsumerWidget {
 
                   if (user != null) {
                     final cycleRepo = ref.read(cycleRepositoryProvider);
-                    final currentCycle = await cycleRepo.getCurrentCycle();
-
-                    String cycleId;
-                    
-                    // If there's an ongoing cycle and startDate is close (e.g. correcting start date), update it.
-                    // If startDate is > 15 days after currentCycle.startDate, complete previous cycle and start a new one.
-                    if (currentCycle != null) {
-                      final dayDiff = startDate.difference(currentCycle.startDate).inDays;
-                      if (dayDiff > 15) {
-                        // Complete previous cycle
-                        await cycleRepo.completeCycle(
-                          currentCycle.id, 
-                          startDate.subtract(const Duration(days: 1)), 
-                          dayDiff, 
-                          user.avgPeriodLength,
-                        );
-                        
-                        // Create new cycle
-                        cycleId = DateTime.now().millisecondsSinceEpoch.toString();
-                        await cycleRepo.insertCycle(
-                          CyclesCompanion.insert(
-                            id: cycleId,
-                            userId: user.id,
-                            startDate: startDate,
-                            cycleLength: drift.Value(user.avgCycleLength),
-                            periodLength: drift.Value(user.avgPeriodLength),
-                          )
-                        );
-                      } else {
-                        // Adjust existing current cycle start date to the selected start date
-                        await cycleRepo.updateCycleStartDate(currentCycle.id, startDate);
-                        cycleId = currentCycle.id;
-                      }
-                    } else {
-                      // No current cycle at all
-                      cycleId = DateTime.now().millisecondsSinceEpoch.toString();
-                      await cycleRepo.insertCycle(
-                        CyclesCompanion.insert(
-                          id: cycleId,
-                          userId: user.id,
-                          startDate: startDate,
-                          cycleLength: drift.Value(user.avgCycleLength),
-                          periodLength: drift.Value(user.avgPeriodLength),
-                        )
-                      );
-                    }
+                    final cycleId = await cycleRepo.getOrCreateCycleForPeriodDate(
+                      startDate,
+                      avgCycleLength: user.avgCycleLength,
+                      avgPeriodLength: user.avgPeriodLength,
+                      userId: user.id,
+                    );
 
                     final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
                     final logId = '${startDate.millisecondsSinceEpoch}_log';

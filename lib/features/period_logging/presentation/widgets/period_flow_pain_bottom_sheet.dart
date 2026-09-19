@@ -8,7 +8,6 @@ import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 import '../../../../shared/widgets/bloom_slider.dart';
-import '../../../calendar/presentation/providers/calendar_provider.dart';
 
 class PeriodFlowPainResult {
   final String flow;
@@ -54,51 +53,12 @@ Future<void> showPeriodFlowPainSheet({
   final user = ref.read(userProfileStreamProvider).value;
   final dailyLogRepo = ref.read(dailyLogRepositoryProvider);
   final cycleRepo = ref.read(cycleRepositoryProvider);
-  final currentCycle = ref.read(currentCycleStreamProvider).value;
-  final isPeriodLate = ref.read(calendarProvider).isPeriodLate;
-
-  String? cycleId = currentCycle?.id;
-
-  if (currentCycle != null) {
-    final dayDiff = cleanDate.difference(currentCycle.startDate).inDays;
-    if (isPeriodLate || dayDiff >= 15) {
-      // Previous cycle completed, start new cycle
-      await cycleRepo.completeCycle(
-        currentCycle.id,
-        cleanDate.subtract(const Duration(days: 1)),
-        dayDiff > 0 ? dayDiff : (user?.avgCycleLength ?? 29),
-        currentCycle.periodLength ?? user?.avgPeriodLength ?? 5,
-      );
-
-      final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
-      await cycleRepo.insertCycle(
-        CyclesCompanion.insert(
-          id: newCycleId,
-          userId: user?.id ?? 'default_user',
-          startDate: cleanDate,
-          cycleLength: drift.Value(user?.avgCycleLength ?? 29),
-          periodLength: drift.Value(user?.avgPeriodLength ?? 5),
-        ),
-      );
-      cycleId = newCycleId;
-    } else if (cycleDay == 1) {
-      // User explicitly set/corrected Day 1 of current cycle
-      await cycleRepo.updateCycleStartDate(currentCycle.id, cleanDate);
-    }
-  } else {
-    // No cycle exists yet
-    final newCycleId = DateTime.now().millisecondsSinceEpoch.toString();
-    await cycleRepo.insertCycle(
-      CyclesCompanion.insert(
-        id: newCycleId,
-        userId: user?.id ?? 'default_user',
-        startDate: cleanDate,
-        cycleLength: drift.Value(user?.avgCycleLength ?? 29),
-        periodLength: drift.Value(user?.avgPeriodLength ?? 5),
-      ),
-    );
-    cycleId = newCycleId;
-  }
+  final cycleId = await cycleRepo.getOrCreateCycleForPeriodDate(
+    cleanDate,
+    avgCycleLength: user?.avgCycleLength,
+    avgPeriodLength: user?.avgPeriodLength,
+    userId: user?.id,
+  );
 
   final existingLog = await dailyLogRepo.getLogForDate(cleanDate);
   final logId = existingLog?.id ?? '${cleanDate.millisecondsSinceEpoch}_log';

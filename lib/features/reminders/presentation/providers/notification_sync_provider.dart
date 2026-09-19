@@ -20,18 +20,29 @@ final notificationSyncProvider = Provider<void>((ref) {
   final today = DateTime(now.year, now.month, now.day);
 
   // Check if period is ongoing
-  final todayLog = logs.where((l) =>
-    l.date.year == today.year &&
-    l.date.month == today.month &&
-    l.date.day == today.day
-  ).firstOrNull;
+  final todayLog = logs
+      .where(
+        (l) =>
+            l.date.year == today.year &&
+            l.date.month == today.month &&
+            l.date.day == today.day,
+      )
+      .firstOrNull;
 
-  final hasFlowToday = todayLog?.flowIntensity != null && todayLog!.flowIntensity != 'None';
-  final hasRecentFlow = logs.any((l) =>
-    l.flowIntensity != null &&
-    l.flowIntensity != 'None' &&
-    today.difference(DateTime(l.date.year, l.date.month, l.date.day)).inDays >= 0 &&
-    today.difference(DateTime(l.date.year, l.date.month, l.date.day)).inDays < 5
+  final hasFlowToday =
+      todayLog?.flowIntensity != null && todayLog!.flowIntensity != 'None';
+  final hasRecentFlow = logs.any(
+    (l) =>
+        l.flowIntensity != null &&
+        l.flowIntensity != 'None' &&
+        today
+                .difference(DateTime(l.date.year, l.date.month, l.date.day))
+                .inDays >=
+            0 &&
+        today
+                .difference(DateTime(l.date.year, l.date.month, l.date.day))
+                .inDays <
+            5,
   );
   final isPeriodOngoing = hasFlowToday || hasRecentFlow;
 
@@ -71,7 +82,9 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idPeriodAlert);
-      NotificationService.instance.cancel(NotificationService.idPeriodTodayAlert);
+      NotificationService.instance.cancel(
+        NotificationService.idPeriodTodayAlert,
+      );
     }
   }
 
@@ -88,7 +101,9 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idFertileAlert);
-      NotificationService.instance.cancel(NotificationService.idFertileTodayAlert);
+      NotificationService.instance.cancel(
+        NotificationService.idFertileTodayAlert,
+      );
     }
   }
 
@@ -96,7 +111,9 @@ final notificationSyncProvider = Provider<void>((ref) {
   final ovulationReminder = reminderMap['ovulation'];
   if (ovulationReminder != null) {
     final ovulationDay = calendarState.ovulationDay;
-    if (ovulationReminder.isEnabled && ovulationDay != null && !isPeriodOngoing) {
+    if (ovulationReminder.isEnabled &&
+        ovulationDay != null &&
+        !isPeriodOngoing) {
       NotificationService.instance.scheduleOvulationAlert(
         ovulationDate: ovulationDay,
         isEnabled: ovulationReminder.isEnabled,
@@ -104,7 +121,9 @@ final notificationSyncProvider = Provider<void>((ref) {
       );
     } else {
       NotificationService.instance.cancel(NotificationService.idOvulationAlert);
-      NotificationService.instance.cancel(NotificationService.idOvulationEveAlert);
+      NotificationService.instance.cancel(
+        NotificationService.idOvulationEveAlert,
+      );
     }
   }
 
@@ -157,12 +176,17 @@ DateTime? _findFertileStart(List<DateTime> fertileDays, DateTime today) {
 
   final starts = <DateTime>[];
   for (final day in fertileDays) {
-    final prevDay =
-        DateTime(day.year, day.month, day.day).subtract(const Duration(days: 1));
-    final hasPrev = fertileDays.any((d) =>
-        d.year == prevDay.year &&
-        d.month == prevDay.month &&
-        d.day == prevDay.day);
+    final prevDay = DateTime(
+      day.year,
+      day.month,
+      day.day,
+    ).subtract(const Duration(days: 1));
+    final hasPrev = fertileDays.any(
+      (d) =>
+          d.year == prevDay.year &&
+          d.month == prevDay.month &&
+          d.day == prevDay.day,
+    );
     if (!hasPrev) {
       starts.add(DateTime(day.year, day.month, day.day));
     }
@@ -171,7 +195,9 @@ DateTime? _findFertileStart(List<DateTime> fertileDays, DateTime today) {
   for (final start in starts) {
     final eve = start.subtract(const Duration(days: 1));
     final isEveToday =
-        today.year == eve.year && today.month == eve.month && today.day == eve.day;
+        today.year == eve.year &&
+        today.month == eve.month &&
+        today.day == eve.day;
     if (!today.isAfter(start) || isEveToday) {
       return start;
     }

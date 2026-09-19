@@ -10,8 +10,7 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
 
@@ -100,11 +99,14 @@ class NotificationService {
 
       await _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(androidChannel);
 
       _isInitialized = initialized ?? true;
-      debugPrint('NotificationService initialized successfully: $_isInitialized');
+      debugPrint(
+        'NotificationService initialized successfully: $_isInitialized',
+      );
       return _isInitialized;
     } catch (e, stack) {
       debugPrint('Warning: NotificationService initialize failed: $e\n$stack');
@@ -119,8 +121,10 @@ class NotificationService {
 
       bool granted = false;
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         final notifGranted =
             await androidPlugin.requestNotificationsPermission() ?? false;
@@ -130,10 +134,13 @@ class NotificationService {
         granted = notifGranted || areEnabled;
       }
 
-      final iosPlugin = _plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final iosPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (iosPlugin != null) {
-        final iosGranted = await iosPlugin.requestPermissions(
+        final iosGranted =
+            await iosPlugin.requestPermissions(
               alert: true,
               badge: true,
               sound: true,
@@ -153,8 +160,10 @@ class NotificationService {
     try {
       if (!_isInitialized) await initialize();
 
-      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         return await androidPlugin.areNotificationsEnabled() ?? false;
       }
@@ -230,7 +239,9 @@ class NotificationService {
         );
         return true;
       } catch (innerErr) {
-        debugPrint('showInstantNotification first attempt failed ($innerErr), attempting fallback details...');
+        debugPrint(
+          'showInstantNotification first attempt failed ($innerErr), attempting fallback details...',
+        );
         final fallbackAndroid = AndroidNotificationDetails(
           channelId,
           channelName,
@@ -291,7 +302,9 @@ class NotificationService {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      final title = isDiscrete ? 'Daily Check-in 🌿' : 'Daily Check-in Reminder';
+      final title = isDiscrete
+          ? 'Daily Check-in 🌿'
+          : 'Daily Check-in Reminder';
       final body = isDiscrete
           ? 'Time for your daily Bloom check-in.'
           : 'Remember to log your mood, flow, and symptoms for today.';
@@ -303,7 +316,9 @@ class NotificationService {
         matchDateTimeComponents: DateTimeComponents.time,
         payload: '/reminders',
       );
-      debugPrint('Scheduled daily check-in (isDiscrete: $isDiscrete) at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+      debugPrint(
+        'Scheduled daily check-in (isDiscrete: $isDiscrete) at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
+      );
       return true;
     } catch (e) {
       debugPrint('Error scheduling daily checkin notification: $e');
@@ -311,34 +326,11 @@ class NotificationService {
     }
   }
 
-  static final Set<String> _shownTodayKeys = {};
-
   @visibleForTesting
-  static void resetShownTodayCache() {
-    _shownTodayKeys.clear();
-  }
+  static void resetShownTodayCache() {}
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  Future<void> _showMilestoneIfDueToday({
-    required int id,
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    final now = DateTime.now();
-    final key = '${now.year}-${now.month}-${now.day}_$id';
-    if (_shownTodayKeys.contains(key)) return;
-    _shownTodayKeys.add(key);
-
-    await showInstantNotification(
-      id: id,
-      title: title,
-      body: body,
-      payload: payload,
-    );
   }
 
   Future<void> _scheduleOrShowMilestone({
@@ -350,17 +342,17 @@ class NotificationService {
   }) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final targetDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetDay = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+    );
 
     if (_isSameDay(targetDay, today)) {
-      if (now.hour >= 9) {
-        await _showMilestoneIfDueToday(
-          id: id,
-          title: title,
-          body: body,
-          payload: payload,
-        );
-      } else {
+      // If the milestone is today and it's before 9:00 AM, schedule for 9:00 AM today.
+      // If 9:00 AM has already passed today, the milestone alarm time is past.
+      // We do NOT fire an instant notification when the user opens the app.
+      if (now.hour < 9) {
         final scheduledDate = tz.TZDateTime(
           tz.local,
           now.year,
@@ -415,15 +407,16 @@ class NotificationService {
       // 1. Advance reminder (e.g. 1, 2, or 3 days before)
       if (daysBefore > 0) {
         final advanceDate = periodDate.subtract(Duration(days: daysBefore));
-        final advanceTitle =
-            isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
+        final advanceTitle = isDiscrete
+            ? 'Cycle Reminder 🌸'
+            : 'Expected Period Alert';
         final advanceBody = isDiscrete
             ? (daysBefore == 1
-                ? 'You have an upcoming cycle milestone tomorrow.'
-                : 'You have an upcoming cycle milestone in $daysBefore days.')
+                  ? 'You have an upcoming cycle milestone tomorrow.'
+                  : 'You have an upcoming cycle milestone in $daysBefore days.')
             : (daysBefore == 1
-                ? 'Period expected tomorrow.'
-                : 'Period expected in $daysBefore days.');
+                  ? 'Period expected tomorrow.'
+                  : 'Period expected in $daysBefore days.');
 
         await _scheduleOrShowMilestone(
           id: idPeriodAlert,
@@ -435,8 +428,9 @@ class NotificationService {
       }
 
       // 2. Day-of period reminder (on expected period start date)
-      final todayTitle =
-          isDiscrete ? 'Cycle Reminder 🌸' : 'Expected Period Alert';
+      final todayTitle = isDiscrete
+          ? 'Cycle Reminder 🌸'
+          : 'Expected Period Alert';
       final todayBody = isDiscrete
           ? 'You have an expected cycle milestone today. Tap to view.'
           : 'Period expected today.';
@@ -473,8 +467,9 @@ class NotificationService {
 
       // 1. Eve reminder: 1 day before fertile window starts
       final eveDate = fertileStart.subtract(const Duration(days: 1));
-      final eveTitle =
-          isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
+      final eveTitle = isDiscrete
+          ? 'Wellness Update ✨'
+          : 'Fertile Window Alert';
       final eveBody = isDiscrete
           ? 'A new cycle phase begins tomorrow. Tap to view in Bloom.'
           : 'Fertile window is expected to start tomorrow.';
@@ -489,9 +484,9 @@ class NotificationService {
 
       // 2. Day-of reminder: on fertile window start day
       final todayTitle =
-          isDiscrete ? 'Wellness Update ✨' : 'Fertile Window Alert';
+          isDiscrete ? 'Cycle Update 🌸' : 'Fertile Window Alert';
       final todayBody = isDiscrete
-          ? 'A new phase update is ready in Bloom. Tap to check your insights.'
+          ? 'An important cycle phase begins today.'
           : 'Fertile window is expected to start today.';
 
       await _scheduleOrShowMilestone(
@@ -526,8 +521,7 @@ class NotificationService {
 
       // 1. Eve reminder: 1 day before ovulation
       final eveDate = ovulationDate.subtract(const Duration(days: 1));
-      final eveTitle =
-          isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Alert';
+      final eveTitle = isDiscrete ? 'Cycle Milestone 🌸' : 'Ovulation Alert';
       final eveBody = isDiscrete
           ? 'An important cycle milestone is predicted for tomorrow.'
           : 'Ovulation expected tomorrow.';
@@ -541,10 +535,11 @@ class NotificationService {
       );
 
       // 2. Day-of reminder: on ovulation day
-      final todayTitle =
-          isDiscrete ? 'Health & Cycle Tip 🌸' : 'Ovulation Day Alert';
+      final todayTitle = isDiscrete
+          ? 'Cycle Milestone 🌸'
+          : 'Ovulation Day Alert';
       final todayBody = isDiscrete
-          ? 'New daily insight ready for you in Bloom.'
+          ? 'An important cycle milestone is predicted for today.'
           : 'Ovulation is expected today.';
 
       await _scheduleOrShowMilestone(
@@ -592,7 +587,10 @@ class NotificationService {
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/cycle_notif_cache.json');
-      await file.writeAsString(jsonEncode(_notifiedCycleIds.toList()), flush: true);
+      await file.writeAsString(
+        jsonEncode(_notifiedCycleIds.toList()),
+        flush: true,
+      );
     } catch (_) {}
   }
 
@@ -602,16 +600,15 @@ class NotificationService {
     _prefsLoaded = true;
   }
 
-  Future<bool> showCycleSummaryNotification({
-    bool isDiscrete = false,
-  }) async {
+  Future<bool> showCycleSummaryNotification({bool isDiscrete = false}) async {
     try {
       if (!_isInitialized) {
         final ok = await initialize();
         if (!ok) return false;
       }
-      final title =
-          isDiscrete ? 'Wellness Insights 🌿' : 'Monthly Cycle Summary';
+      final title = isDiscrete
+          ? 'Wellness Insights 🌿'
+          : 'Monthly Cycle Summary';
       final body = isDiscrete
           ? 'Your latest wellness summary is ready in Bloom.'
           : 'Your cycle summary and insights are ready. Tap to view your cycle trends.';
@@ -663,8 +660,9 @@ class NotificationService {
         );
       }
 
-      final title =
-          isDiscrete ? 'Wellness Insights 🌿' : 'Monthly Cycle Summary';
+      final title = isDiscrete
+          ? 'Wellness Insights 🌿'
+          : 'Monthly Cycle Summary';
       final body = isDiscrete
           ? 'Your latest wellness summary is ready in Bloom.'
           : 'Your cycle summary and insights are ready. Tap to view your cycle trends.';
@@ -705,7 +703,9 @@ class NotificationService {
         payload: payload,
       );
     } catch (e) {
-      debugPrint('Exact alarm not permitted ($e), falling back to inexact: $id');
+      debugPrint(
+        'Exact alarm not permitted ($e), falling back to inexact: $id',
+      );
       try {
         await _plugin.zonedSchedule(
           id: id,

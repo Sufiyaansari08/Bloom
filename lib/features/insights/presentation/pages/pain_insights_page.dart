@@ -1,39 +1,275 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
+import '../../../../core/database/database_providers.dart';
+import '../../../../core/database/app_database.dart';
 
-class PainInsightsPage extends StatefulWidget {
+class PainInsightsPage extends ConsumerStatefulWidget {
   const PainInsightsPage({super.key});
 
   @override
-  State<PainInsightsPage> createState() => _PainInsightsPageState();
+  ConsumerState<PainInsightsPage> createState() => _PainInsightsPageState();
 }
 
-class _PainInsightsPageState extends State<PainInsightsPage> {
+class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
   int _selectedCycles = 6;
-  final List<double> _allDummyPainValues = [5.6, 6.2, 4.8, 8.0, 5.0, 4.2, 7.1, 5.5];
+
+  bool _isLogForCycle(DailyLog log, Cycle cycle) {
+    if (log.cycleId != null && log.cycleId == cycle.id) return true;
+    final logDate = DateTime(log.date.year, log.date.month, log.date.day);
+    final startDate = DateTime(
+      cycle.startDate.year,
+      cycle.startDate.month,
+      cycle.startDate.day,
+    );
+    final endDate = cycle.endDate != null
+        ? DateTime(
+            cycle.endDate!.year,
+            cycle.endDate!.month,
+            cycle.endDate!.day,
+          )
+        : startDate.add(Duration(days: (cycle.cycleLength ?? 28) - 1));
+    return !logDate.isBefore(startDate) && !logDate.isAfter(endDate);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentData = _allDummyPainValues.take(_selectedCycles).toList();
-    final averagePain = (currentData.reduce((a, b) => a + b) / currentData.length).toStringAsFixed(1);
-    
-    // Find min and max
-    double minPain = currentData[0];
-    double maxPain = currentData[0];
-    int maxCycleIndex = 1;
-    int minCycleIndex = 1;
-    for (int i = 0; i < currentData.length; i++) {
-      if (currentData[i] > maxPain) {
-        maxPain = currentData[i];
-        maxCycleIndex = i + 1;
+    final user = ref.watch(userProfileStreamProvider).value;
+    final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
+    final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
+
+    final completedCycles = cycles
+        .where((c) =>
+            !c.isDeleted &&
+            c.endDate != null &&
+            c.cycleLength != null &&
+            c.cycleLength! > 0)
+        .toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    // Disclaimer if user selected a number of cycles not yet reached
+    final String? disclaimerText;
+    if (completedCycles.isEmpty) {
+      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+    } else if (completedCycles.length < _selectedCycles) {
+      disclaimerText =
+          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+    } else {
+      disclaimerText = null;
+    }
+
+    // Subset of completed cycles
+    final recentSubset = completedCycles.length > _selectedCycles
+        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
+        : completedCycles;
+
+    final validLogs = allLogs.where((l) => !l.isDeleted).toList();
+
+    // Calculate cycle pain averages and spots for the line chart
+    final List<double> cycleAverages = [];
+    final List<FlSpot> spots = [];
+    final Map<int, double> cyclesWithPain = {};
+
+    for (int i = 0; i < recentSubset.length; i++) {
+      final c = recentSubset[i];
+      final cLogs = validLogs
+          .where((l) =>
+              l.painLevel != null &&
+              l.painLevel! > 0 &&
+              _isLogForCycle(l, c))
+          .toList();
+
+      if (cLogs.isNotEmpty) {
+        final cAvg = cLogs.map((l) => l.painLevel!).reduce((a, b) => a + b) /
+            cLogs.length;
+        final rounded = double.parse(cAvg.toStringAsFixed(1));
+        cycleAverages.add(rounded);
+        spots.add(FlSpot((i + 1).toDouble(), rounded));
+        cyclesWithPain[i + 1] = rounded;
+      } else {
+        cycleAverages.add(0.0);
+        spots.add(FlSpot((i + 1).toDouble(), 0.0));
       }
-      if (currentData[i] < minPain) {
-        minPain = currentData[i];
-        minCycleIndex = i + 1;
+    }
+
+    // All pain logs belonging to the recent completed cycles
+    final List<DailyLog> allRecentPainLogs = [
+      for (final c in recentSubset)
+        ...validLogs.where((l) =>
+            l.painLevel != null &&
+            l.painLevel! > 0 &&
+            _isLogForCycle(l, c)),
+    ];
+
+    // Card 1: Average pain score
+    final double overallAveragePain;
+    final String averagePainStr;
+    if (allRecentPainLogs.isNotEmpty) {
+      overallAveragePain = allRecentPainLogs
+              .map((l) => l.painLevel!)
+              .reduce((a, b) => a + b) /
+          allRecentPainLogs.length;
+      averagePainStr = overallAveragePain.toStringAsFixed(1);
+    } else {
+      overallAveragePain = 0.0;
+      averagePainStr = '0.0';
+    }
+
+    // Row 2: 3 Small Stat Boxes
+    final String highestPainVal;
+    final String highestPainSub;
+    final String lowestPainVal;
+    final String lowestPainSub;
+    final String mostPainfulVal;
+    final String mostPainfulSub;
+
+    if (cyclesWithPain.isNotEmpty) {
+      var maxEntry = cyclesWithPain.entries.first;
+      var minEntry = cyclesWithPain.entries.first;
+      for (final entry in cyclesWithPain.entries) {
+        if (entry.value > maxEntry.value) maxEntry = entry;
+        if (entry.value < minEntry.value) minEntry = entry;
       }
+      highestPainVal = maxEntry.value.toStringAsFixed(1);
+      highestPainSub = 'Cycle ${maxEntry.key}';
+      lowestPainVal = minEntry.value.toStringAsFixed(1);
+      lowestPainSub = 'Cycle ${minEntry.key}';
+
+      // Most painful cycle day calculation
+      final Map<int, List<int>> painByCycleDay = {};
+      for (final c in recentSubset) {
+        final cLogs = validLogs.where((l) =>
+            l.painLevel != null &&
+            l.painLevel! > 0 &&
+            _isLogForCycle(l, c));
+        for (final l in cLogs) {
+          final day = DateTime(l.date.year, l.date.month, l.date.day)
+                  .difference(DateTime(
+                    c.startDate.year,
+                    c.startDate.month,
+                    c.startDate.day,
+                  ))
+                  .inDays +
+              1;
+          if (day >= 1) {
+            painByCycleDay.putIfAbsent(day, () => []).add(l.painLevel!);
+          }
+        }
+      }
+
+      if (painByCycleDay.isNotEmpty) {
+        int mostPainfulDay = 1;
+        double maxDayAvg = -1.0;
+        for (final entry in painByCycleDay.entries) {
+          final avg =
+              entry.value.reduce((a, b) => a + b) / entry.value.length;
+          if (avg > maxDayAvg) {
+            maxDayAvg = avg;
+            mostPainfulDay = entry.key;
+          }
+        }
+        final periodLen = user?.avgPeriodLength ?? 5;
+        mostPainfulVal = 'Day $mostPainfulDay';
+        mostPainfulSub = mostPainfulDay <= periodLen ? 'of period' : 'of cycle';
+      } else {
+        mostPainfulVal = '--';
+        mostPainfulSub = 'No data';
+      }
+    } else {
+      highestPainVal = '--';
+      highestPainSub = 'No data';
+      lowestPainVal = '--';
+      lowestPainSub = 'No data';
+      mostPainfulVal = '--';
+      mostPainfulSub = 'No data';
+    }
+
+    // Card 2: Pain by phase (average)
+    final List<int> beforePeriodPain = [];
+    final List<int> duringPeriodPain = [];
+    final List<int> afterPeriodPain = [];
+    final List<int> ovulationPain = [];
+
+    for (final c in recentSubset) {
+      final cLen = c.cycleLength ?? user?.avgCycleLength ?? 28;
+      final pLen = c.periodLength ?? user?.avgPeriodLength ?? 5;
+      final cLogs = validLogs.where((l) =>
+          l.painLevel != null &&
+          l.painLevel! > 0 &&
+          _isLogForCycle(l, c));
+
+      for (final l in cLogs) {
+        final d = DateTime(l.date.year, l.date.month, l.date.day)
+                .difference(DateTime(
+                  c.startDate.year,
+                  c.startDate.month,
+                  c.startDate.day,
+                ))
+                .inDays +
+            1;
+
+        if (d >= 1 && d <= pLen) {
+          duringPeriodPain.add(l.painLevel!);
+        } else if (d >= cLen - 3 && d <= cLen + 1) {
+          beforePeriodPain.add(l.painLevel!);
+        } else if (d >= 12 && d <= 16) {
+          ovulationPain.add(l.painLevel!);
+        } else if (d > pLen && d < 12) {
+          afterPeriodPain.add(l.painLevel!);
+        } else {
+          beforePeriodPain.add(l.painLevel!);
+        }
+      }
+    }
+
+    double calcPhaseAvg(List<int> list) {
+      if (list.isEmpty) return 0.0;
+      return list.reduce((a, b) => a + b) / list.length;
+    }
+
+    final beforeAvg = calcPhaseAvg(beforePeriodPain);
+    final duringAvg = calcPhaseAvg(duringPeriodPain);
+    final afterAvg = calcPhaseAvg(afterPeriodPain);
+    final ovulationAvg = calcPhaseAvg(ovulationPain);
+
+    // Card 3: Pain intensity distribution
+    int mildCount = 0;
+    int moderateCount = 0;
+    int severeCount = 0;
+    int verySevereCount = 0;
+
+    for (final l in allRecentPainLogs) {
+      final p = l.painLevel!;
+      if (p <= 3) {
+        mildCount++;
+      } else if (p <= 6) {
+        moderateCount++;
+      } else if (p <= 8) {
+        severeCount++;
+      } else {
+        verySevereCount++;
+      }
+    }
+
+    final totalPainLogs = allRecentPainLogs.length;
+    final int mildPct;
+    final int moderatePct;
+    final int severePct;
+    final int verySeverePct;
+    if (totalPainLogs > 0) {
+      mildPct = ((mildCount / totalPainLogs) * 100).round();
+      moderatePct = ((moderateCount / totalPainLogs) * 100).round();
+      severePct = ((severeCount / totalPainLogs) * 100).round();
+      verySeverePct = (100 - mildPct - moderatePct - severePct).clamp(0, 100);
+    } else {
+      mildPct = 0;
+      moderatePct = 0;
+      severePct = 0;
+      verySeverePct = 0;
     }
 
     return Scaffold(
@@ -61,7 +297,8 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
               showPageInfoDialog(
                 context,
                 title: 'Pain Insights',
-                description: 'Analyze your pain levels to understand severity and duration throughout your cycle phases.',
+                description:
+                    'Analyze your pain levels to understand severity and duration throughout your cycle phases.',
               );
             },
           ),
@@ -75,7 +312,8 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
             // Dropdown
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -130,6 +368,45 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                 ),
               ),
             ),
+
+            // Disclaimer banner when selected count is not yet reached
+            if (disclaimerText != null) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPink.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryPink.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 15,
+                        color: AppColors.primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          disclaimerText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primaryPurple,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // CARD 1: Average pain score with Line Chart
@@ -157,7 +434,7 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        averagePain,
+                        averagePainStr,
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -176,16 +453,18 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getPainCategoryColor(double.parse(averagePain)).withValues(alpha: 0.1),
+                      color: _getPainCategoryColor(overallAveragePain)
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      _getPainCategoryText(double.parse(averagePain)),
+                      _getPainCategoryText(overallAveragePain),
                       style: TextStyle(
                         fontSize: 12,
-                        color: _getPainCategoryColor(double.parse(averagePain)),
+                        color: _getPainCategoryColor(overallAveragePain),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -200,7 +479,7 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                           drawVerticalLine: false,
                           horizontalInterval: 2,
                           getDrawingHorizontalLine: (value) {
-                            return FlLine(
+                            return const FlLine(
                               color: AppColors.border,
                               strokeWidth: 1,
                             );
@@ -208,8 +487,10 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                         ),
                         titlesData: FlTitlesData(
                           show: true,
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
@@ -233,18 +514,25 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                           bottomTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
+                              interval: 1,
                               getTitlesWidget: (value, meta) {
-                                return SideTitleWidget(
-                                  meta: meta,
-                                  space: 8,
-                                  child: Text(
-                                    'C${value.toInt()}',
-                                    style: const TextStyle(
-                                      color: AppColors.secondaryText,
-                                      fontSize: 10,
+                                final intVal = value.toInt();
+                                if (intVal >= 1 &&
+                                    intVal <= _selectedCycles &&
+                                    value == intVal.toDouble()) {
+                                  return SideTitleWidget(
+                                    meta: meta,
+                                    space: 8,
+                                    child: Text(
+                                      'C$intVal',
+                                      style: const TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 10,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                }
+                                return const SizedBox.shrink();
                               },
                             ),
                           ),
@@ -254,52 +542,54 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                         maxX: _selectedCycles.toDouble(),
                         minY: 0,
                         maxY: 10,
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: List.generate(_selectedCycles, (index) {
-                              return FlSpot((index + 1).toDouble(), currentData[index]);
-                            }),
-                            isCurved: true,
-                            color: AppColors.primaryPink,
-                            barWidth: 3,
-                            isStrokeCapRound: true,
-                            dotData: FlDotData(
-                              show: true,
-                              getDotPainter: (spot, percent, barData, index) {
-                                return FlDotCirclePainter(
-                                  radius: 4,
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                  strokeColor: AppColors.primaryPink,
-                                );
-                              },
-                            ),
-                            belowBarData: BarAreaData(
-                              show: true,
-                              color: AppColors.primaryPink.withValues(alpha: 0.1),
-                            ),
-                          ),
-                        ],
+                        lineBarsData: spots.isEmpty
+                            ? []
+                            : [
+                                LineChartBarData(
+                                  spots: spots,
+                                  isCurved: spots.length > 1,
+                                  color: AppColors.primaryPink,
+                                  barWidth: 3,
+                                  isStrokeCapRound: true,
+                                  dotData: FlDotData(
+                                    show: true,
+                                    getDotPainter:
+                                        (spot, percent, barData, index) {
+                                      return FlDotCirclePainter(
+                                        radius: 4,
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                        strokeColor: AppColors.primaryPink,
+                                      );
+                                    },
+                                  ),
+                                  belowBarData: BarAreaData(
+                                    show: true,
+                                    color: AppColors.primaryPink
+                                        .withValues(alpha: 0.1),
+                                  ),
+                                ),
+                              ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // ROW 2: 3 Small Stat Boxes
             Row(
               children: [
-                _buildSmallStatBox('Highest pain', maxPain.toStringAsFixed(1), 'Cycle $maxCycleIndex'),
+                _buildSmallStatBox('Highest pain', highestPainVal, highestPainSub),
                 const SizedBox(width: 8),
-                _buildSmallStatBox('Lowest pain', minPain.toStringAsFixed(1), 'Cycle $minCycleIndex'),
+                _buildSmallStatBox('Lowest pain', lowestPainVal, lowestPainSub),
                 const SizedBox(width: 8),
-                _buildSmallStatBox('Most painful', 'Day 1', 'of period'),
+                _buildSmallStatBox('Most painful', mostPainfulVal, mostPainfulSub),
               ],
             ),
-            
+
             const SizedBox(height: 16),
 
             // CARD 2: Pain by phase (average)
@@ -322,13 +612,13 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildPhasePainRow('Before period', 6.4),
+                  _buildPhasePainRow('Before period', beforeAvg),
                   const SizedBox(height: 16),
-                  _buildPhasePainRow('During period', 8.1),
+                  _buildPhasePainRow('During period', duringAvg),
                   const SizedBox(height: 16),
-                  _buildPhasePainRow('After period', 3.2),
+                  _buildPhasePainRow('After period', afterAvg),
                   const SizedBox(height: 16),
-                  _buildPhasePainRow('Ovulation time', 2.8),
+                  _buildPhasePainRow('Ovulation time', ovulationAvg),
                 ],
               ),
             ),
@@ -355,29 +645,65 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Stacked Bar
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Row(
-                      children: [
-                        Expanded(flex: 30, child: Container(height: 16, color: AppColors.success)),
-                        Expanded(flex: 45, child: Container(height: 16, color: const Color(0xFFF4C059))),
-                        Expanded(flex: 20, child: Container(height: 16, color: AppColors.primaryPurple)),
-                        Expanded(flex: 5, child: Container(height: 16, color: AppColors.primaryPink)),
-                      ],
-                    ),
+                    child: totalPainLogs == 0
+                        ? Container(
+                            height: 16,
+                            color: AppColors.border.withValues(alpha: 0.5),
+                          )
+                        : Row(
+                            children: [
+                              if (mildCount > 0)
+                                Expanded(
+                                  flex: math.max(mildPct, 1),
+                                  child: Container(
+                                    height: 16,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              if (moderateCount > 0)
+                                Expanded(
+                                  flex: math.max(moderatePct, 1),
+                                  child: Container(
+                                    height: 16,
+                                    color: const Color(0xFFF4C059),
+                                  ),
+                                ),
+                              if (severeCount > 0)
+                                Expanded(
+                                  flex: math.max(severePct, 1),
+                                  child: Container(
+                                    height: 16,
+                                    color: AppColors.primaryPurple,
+                                  ),
+                                ),
+                              if (verySevereCount > 0)
+                                Expanded(
+                                  flex: math.max(verySeverePct, 1),
+                                  child: Container(
+                                    height: 16,
+                                    color: AppColors.primaryPink,
+                                  ),
+                                ),
+                            ],
+                          ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Legend
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildLegendItem('Mild', '30%', AppColors.success),
-                      _buildLegendItem('Moderate', '45%', const Color(0xFFF4C059)),
-                      _buildLegendItem('Severe', '20%', AppColors.primaryPurple),
-                      _buildLegendItem('V.Severe', '5%', AppColors.primaryPink),
+                      _buildLegendItem('Mild', '$mildPct%', AppColors.success),
+                      _buildLegendItem(
+                          'Moderate', '$moderatePct%', const Color(0xFFF4C059)),
+                      _buildLegendItem(
+                          'Severe', '$severePct%', AppColors.primaryPurple),
+                      _buildLegendItem(
+                          'V.Severe', '$verySeverePct%', AppColors.primaryPink),
                     ],
                   ),
                 ],
@@ -390,6 +716,7 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
   }
 
   Color _getPainCategoryColor(double score) {
+    if (score == 0.0) return AppColors.secondaryText;
     if (score <= 3.0) return AppColors.success;
     if (score <= 6.0) return const Color(0xFFF4C059);
     if (score <= 8.0) return AppColors.primaryPurple;
@@ -397,6 +724,7 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
   }
 
   String _getPainCategoryText(double score) {
+    if (score == 0.0) return 'No Pain Logged';
     if (score <= 3.0) return 'Mild';
     if (score <= 6.0) return 'Moderate';
     if (score <= 8.0) return 'Severe';
@@ -448,6 +776,7 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
 
   Widget _buildPhasePainRow(String label, double score) {
     final color = _getPainCategoryColor(score);
+    final widthFactor = (score / 10.0).clamp(0.0, 1.0);
     return Row(
       children: [
         Expanded(
@@ -473,11 +802,11 @@ class _PainInsightsPageState extends State<PainInsightsPage> {
                 ),
               ),
               FractionallySizedBox(
-                widthFactor: score / 10.0,
+                widthFactor: widthFactor,
                 child: Container(
                   height: 8,
                   decoration: BoxDecoration(
-                    color: color,
+                    color: score > 0 ? color : Colors.transparent,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

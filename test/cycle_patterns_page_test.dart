@@ -153,15 +153,15 @@ void main() {
       expect(find.text('C3'), findsOneWidget);
       expect(find.text('C4'), findsOneWidget);
 
-      // Switch dropdown to "Last 3 cycles"
+      // Switch dropdown to "Last 2 cycles"
       await tester.tap(find.text('Last 6 cycles'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Last 3 cycles').last);
+      await tester.tap(find.text('Last 2 cycles').last);
       await tester.pumpAndSettle();
 
-      // Now 4 >= 3, disclaimer is NOT shown
-      expect(find.text('Your last 3 cycles are not yet completed'), findsNothing);
+      // For 2 cycles, only 2 bars shown (C1, C2) and no disclaimer
+      expect(find.text('Last 2 cycles'), findsOneWidget);
       expect(find.textContaining('not yet completed'), findsNothing);
     });
   });

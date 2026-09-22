@@ -191,7 +191,7 @@ class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [3, 4, 5, 6, 7, 8].map((int value) {
+                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(

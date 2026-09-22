@@ -76,7 +76,7 @@ class _LifestyleInsightsPageState extends State<LifestyleInsightsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [3, 4, 5, 6, 7, 8].map((int value) {
+                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(
@@ -378,6 +378,8 @@ class _LifestyleInsightsPageState extends State<LifestyleInsightsPage> {
 
   Map<String, String> _getDummyData(int cycles) {
     switch (cycles) {
+      case 2:
+        return {'sleep': '7h 00m', 'water': '2.0 L', 'activity': 'Moderate', 'stress': '4.5 / 10'};
       case 3:
         return {'sleep': '7h 15m', 'water': '2.1 L', 'activity': 'High', 'stress': '4.1 / 10'};
       case 4:

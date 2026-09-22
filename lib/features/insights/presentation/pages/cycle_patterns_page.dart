@@ -1,26 +1,134 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/database/database_providers.dart';
 
-class CyclePatternsPage extends StatefulWidget {
+class CyclePatternsPage extends ConsumerStatefulWidget {
   const CyclePatternsPage({super.key});
 
   @override
-  State<CyclePatternsPage> createState() => _CyclePatternsPageState();
+  ConsumerState<CyclePatternsPage> createState() => _CyclePatternsPageState();
 }
 
-class _CyclePatternsPageState extends State<CyclePatternsPage> {
+class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
   int _selectedCycles = 6;
-  final List<double> _allDummyValues = [28.0, 30.0, 29.0, 31.0, 30.0, 29.0, 28.0, 32.0];
 
   @override
   Widget build(BuildContext context) {
-    final currentData = _allDummyValues.take(_selectedCycles).toList();
-    final averageCycle = (currentData.reduce((a, b) => a + b) / currentData.length).round();
-    final shortestCycle = currentData.reduce((a, b) => a < b ? a : b).round();
-    final longestCycle = currentData.reduce((a, b) => a > b ? a : b).round();
+    final user = ref.watch(userProfileStreamProvider).value;
+    final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
+
+    // Filter completed cycles
+    final completedCycles = cycles
+        .where((c) =>
+            !c.isDeleted &&
+            c.endDate != null &&
+            c.cycleLength != null &&
+            c.cycleLength! > 0)
+        .toList();
+    // Chronological order (oldest to newest) for chart display
+    completedCycles.sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    // Take the most recent _selectedCycles
+    final recentSubset = completedCycles.length > _selectedCycles
+        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
+        : completedCycles;
+
+    final int averageCycle;
+    final int shortestCycle;
+    final int longestCycle;
+    final int averagePeriod;
+    final String variationValue;
+    final String consistencyText;
+    final double consistencyProgress;
+    final String aboutText;
+
+    if (recentSubset.isNotEmpty) {
+      final lengths = recentSubset.map((c) => c.cycleLength!).toList();
+      averageCycle = (lengths.reduce((a, b) => a + b) / lengths.length).round();
+      shortestCycle = lengths.reduce((a, b) => a < b ? a : b);
+      longestCycle = lengths.reduce((a, b) => a > b ? a : b);
+
+      final periodLengths = recentSubset
+          .where((c) => c.periodLength != null && c.periodLength! > 0)
+          .map((c) => c.periodLength!)
+          .toList();
+      if (periodLengths.isNotEmpty) {
+        averagePeriod =
+            (periodLengths.reduce((a, b) => a + b) / periodLengths.length)
+                .round();
+      } else {
+        averagePeriod = user?.avgPeriodLength ?? 5;
+      }
+
+      if (recentSubset.length < 2) {
+        variationValue = '±0';
+        consistencyText = 'Building your cycle baseline.';
+        consistencyProgress = 1.0;
+        aboutText =
+            'You have 1 cycle recorded ($averageCycle days). Continued tracking will uncover your personalized patterns.';
+      } else {
+        final mean = averageCycle.toDouble();
+        final devSum = recentSubset
+            .map((c) => (c.cycleLength! - mean).abs())
+            .reduce((a, b) => a + b);
+        final variation = (devSum / recentSubset.length).round();
+        variationValue = '±$variation';
+
+        if (variation <= 2) {
+          consistencyText = 'Your cycles are very regular and consistent.';
+          consistencyProgress = 0.95;
+        } else if (variation <= 4) {
+          consistencyText = 'Your cycles are fairly consistent.';
+          consistencyProgress = 0.80;
+        } else {
+          consistencyText = 'Your cycle length varies from month to month.';
+          consistencyProgress = 0.55;
+        }
+
+        final diff = longestCycle - shortestCycle;
+        if (diff == 0) {
+          aboutText =
+              'All your tracked cycles have a consistent length of $averageCycle days.';
+        } else if (diff <= 3) {
+          aboutText =
+              'Your cycle length has been stable with small variations between $shortestCycle and $longestCycle days.';
+        } else {
+          aboutText =
+              'Your cycles range between $shortestCycle and $longestCycle days (${diff} days difference).';
+        }
+      }
+    } else {
+      // Zero completed cycles: strictly use onboarding baseline
+      averageCycle = user?.avgCycleLength ?? 28;
+      shortestCycle = user?.avgCycleLength ?? 28;
+      longestCycle = user?.avgCycleLength ?? 28;
+      averagePeriod = user?.avgPeriodLength ?? 5;
+      variationValue = '±0';
+      consistencyText = 'Tracking your first cycles with Bloom.';
+      consistencyProgress = 1.0;
+      aboutText =
+          'Your baseline cycle length is currently set to $averageCycle days based on your onboarding profile.';
+    }
+
+    // Disclaimer if user selected a number of cycles not yet reached
+    final String? disclaimerText;
+    if (completedCycles.isEmpty) {
+      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+    } else if (completedCycles.length < _selectedCycles) {
+      disclaimerText =
+          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+    } else {
+      disclaimerText = null;
+    }
+
+    final double chartMaxY = recentSubset.isEmpty
+        ? 35.0
+        : math.max(longestCycle.toDouble() + 5.0, 35.0);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -47,7 +155,8 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
               showPageInfoDialog(
                 context,
                 title: 'Cycle Patterns',
-                description: 'Review the lengths of your previous cycles to understand variations and establish a baseline.',
+                description:
+                    'Review the lengths of your previous cycles to understand variations and establish a baseline.',
               );
             },
           ),
@@ -61,7 +170,8 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
             // Dropdown
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -116,6 +226,46 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                 ),
               ),
             ),
+
+            // Disclaimer banner when selected count is not yet reached
+            if (disclaimerText != null) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPink.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryPink.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 15,
+                        color: AppColors.primaryPurple,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          disclaimerText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primaryPurple,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 16),
 
             // CARD 1: Average Cycle Length with Bar Chart
@@ -166,7 +316,7 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                     child: BarChart(
                       BarChartData(
                         minY: 0,
-                        maxY: 35,
+                        maxY: chartMaxY,
                         gridData: const FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -174,8 +324,12 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                         ),
                         titlesData: FlTitlesData(
                           show: true,
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                           leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
@@ -198,13 +352,17 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                           ),
                           bottomTitles: AxisTitles(
                             sideTitles: SideTitles(
-                              showTitles: true,
+                              showTitles: recentSubset.isNotEmpty,
                               getTitlesWidget: (value, meta) {
+                                final idx = value.toInt() - 1;
+                                if (idx < 0 || idx >= recentSubset.length) {
+                                  return const SizedBox.shrink();
+                                }
                                 return SideTitleWidget(
                                   meta: meta,
                                   space: 8,
                                   child: Text(
-                                    'C${value.toInt()}',
+                                    'C${idx + 1}',
                                     style: const TextStyle(
                                       color: AppColors.secondaryText,
                                       fontSize: 10,
@@ -216,16 +374,22 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                           ),
                         ),
                         borderData: FlBorderData(show: false),
-                        barGroups: List.generate(_selectedCycles, (index) {
-                          return _buildBarData(index + 1, currentData[index]);
-                        }),
+                        barGroups: recentSubset.isEmpty
+                            ? const []
+                            : List.generate(recentSubset.length, (index) {
+                                final c = recentSubset[index];
+                                return _buildBarData(
+                                  index + 1,
+                                  c.cycleLength!.toDouble(),
+                                );
+                              }),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // ROW 2: 3 Small Stat Boxes
@@ -235,10 +399,10 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                 const SizedBox(width: 8),
                 _buildSmallStatBox('Longest cycle', '$longestCycle'),
                 const SizedBox(width: 8),
-                _buildSmallStatBox('Average period', '5'),
+                _buildSmallStatBox('Average period', '$averagePeriod'),
               ],
             ),
-            
+
             const SizedBox(height: 16),
 
             // CARD 2: Cycle Variation
@@ -268,17 +432,17 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
-                          children: const [
+                          children: [
                             Text(
-                              '±2',
-                              style: TextStyle(
+                              variationValue,
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.text,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Text(
+                            const SizedBox(width: 4),
+                            const Text(
                               'days',
                               style: TextStyle(
                                 fontSize: 14,
@@ -288,9 +452,9 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Your cycles are fairly consistent.',
-                          style: TextStyle(
+                        Text(
+                          consistencyText,
+                          style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.secondaryText,
                           ),
@@ -309,8 +473,8 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                           strokeWidth: 8,
                           color: AppColors.border,
                         ),
-                        const CircularProgressIndicator(
-                          value: 0.8,
+                        CircularProgressIndicator(
+                          value: consistencyProgress,
                           strokeWidth: 8,
                           color: AppColors.primaryPurple,
                           strokeCap: StrokeCap.round,
@@ -337,8 +501,8 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
+                      children: [
+                        const Text(
                           'About your cycles',
                           style: TextStyle(
                             fontSize: 16,
@@ -346,10 +510,10 @@ class _CyclePatternsPageState extends State<CyclePatternsPage> {
                             color: AppColors.text,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
-                          'Your cycle length has been stable with small variations.',
-                          style: TextStyle(
+                          aboutText,
+                          style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.secondaryText,
                             height: 1.4,

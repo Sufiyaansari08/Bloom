@@ -1,22 +1,282 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
+import '../../../../core/database/database_providers.dart';
+import '../../../../core/database/app_database.dart';
 
-class MoodTrendsPage extends StatefulWidget {
+class MoodTrendsPage extends ConsumerStatefulWidget {
   const MoodTrendsPage({super.key});
 
   @override
-  State<MoodTrendsPage> createState() => _MoodTrendsPageState();
+  ConsumerState<MoodTrendsPage> createState() => _MoodTrendsPageState();
 }
 
-class _MoodTrendsPageState extends State<MoodTrendsPage> {
+class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
   int _selectedCycles = 6;
+
+  bool _isLogForCycle(DailyLog log, Cycle cycle) {
+    if (log.cycleId != null && log.cycleId == cycle.id) return true;
+    final logDate = DateTime(log.date.year, log.date.month, log.date.day);
+    final startDate = DateTime(
+      cycle.startDate.year,
+      cycle.startDate.month,
+      cycle.startDate.day,
+    );
+    final endDate = cycle.endDate != null
+        ? DateTime(
+            cycle.endDate!.year,
+            cycle.endDate!.month,
+            cycle.endDate!.day,
+          )
+        : startDate.add(Duration(days: (cycle.cycleLength ?? 28) - 1));
+    return !logDate.isBefore(startDate) && !logDate.isAfter(endDate);
+  }
+
+  String? _normalizeMood(String? raw) {
+    if (raw == null) return null;
+    final trimmed = raw.trim().toLowerCase();
+    if (trimmed.isEmpty || trimmed == 'none') return null;
+    if (trimmed == 'great') return 'Great';
+    if (trimmed == 'good') return 'Good';
+    if (trimmed == 'okay') return 'Okay';
+    if (trimmed == 'not great' || trimmed == 'not_great' || trimmed == 'notgreat') {
+      return 'Not great';
+    }
+    if (trimmed == 'bad') return 'Bad';
+    return null;
+  }
+
+  String _getPredominantMood(List<String> list) {
+    final counts = <String, int>{};
+    for (final m in list) {
+      counts[m] = (counts[m] ?? 0) + 1;
+    }
+    var maxMood = list.first;
+    var maxCount = -1;
+    for (final entry in counts.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        maxMood = entry.key;
+      }
+    }
+    return maxMood;
+  }
+
+  (IconData, Color, String) _getMoodDisplay(String mood) {
+    switch (mood) {
+      case 'Great':
+        return (Icons.sentiment_very_satisfied, AppColors.success, 'Great');
+      case 'Good':
+        return (Icons.sentiment_satisfied_alt, Colors.blue, 'Good');
+      case 'Okay':
+        return (Icons.sentiment_neutral, const Color(0xFFF4C059), 'Okay');
+      case 'Not great':
+        return (Icons.sentiment_dissatisfied, AppColors.primaryPurple, 'Not Great');
+      case 'Bad':
+        return (Icons.mood_bad, AppColors.primaryPink, 'Bad');
+      default:
+        return (Icons.sentiment_satisfied, AppColors.secondaryText, mood);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final moodData = _getMoodData(_selectedCycles);
+    final user = ref.watch(userProfileStreamProvider).value;
+    final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
+    final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
+
+    final completedCycles = cycles
+        .where((c) =>
+            !c.isDeleted &&
+            c.endDate != null &&
+            c.cycleLength != null &&
+            c.cycleLength! > 0)
+        .toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    // Disclaimer if user selected a number of cycles not yet reached
+    final String? disclaimerText;
+    if (completedCycles.isEmpty) {
+      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+    } else if (completedCycles.length < _selectedCycles) {
+      disclaimerText =
+          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+    } else {
+      disclaimerText = null;
+    }
+
+    // Subset of completed cycles
+    final recentSubset = completedCycles.length > _selectedCycles
+        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
+        : completedCycles;
+
+    final validLogs = allLogs.where((l) => !l.isDeleted).toList();
+
+    // All mood logs belonging to the recent completed cycles
+    final List<DailyLog> relevantMoodLogs = [
+      for (final c in recentSubset)
+        ...validLogs.where((l) =>
+            _normalizeMood(l.mood) != null &&
+            _isLogForCycle(l, c)),
+    ];
+
+    // Card 1: Mood distribution counts
+    int greatCount = 0;
+    int goodCount = 0;
+    int okayCount = 0;
+    int notGreatCount = 0;
+    int badCount = 0;
+
+    for (final l in relevantMoodLogs) {
+      final norm = _normalizeMood(l.mood);
+      if (norm == 'Great') greatCount++;
+      if (norm == 'Good') goodCount++;
+      if (norm == 'Okay') okayCount++;
+      if (norm == 'Not great') notGreatCount++;
+      if (norm == 'Bad') badCount++;
+    }
+
+    final totalMoods = relevantMoodLogs.length;
+    final int greatPct;
+    final int goodPct;
+    final int okayPct;
+    final int notGreatPct;
+    final int badPct;
+
+    if (totalMoods > 0) {
+      greatPct = ((greatCount / totalMoods) * 100).round();
+      goodPct = ((goodCount / totalMoods) * 100).round();
+      okayPct = ((okayCount / totalMoods) * 100).round();
+      notGreatPct = ((notGreatCount / totalMoods) * 100).round();
+      badPct = (100 - greatPct - goodPct - okayPct - notGreatPct).clamp(0, 100);
+    } else {
+      greatPct = 0;
+      goodPct = 0;
+      okayPct = 0;
+      notGreatPct = 0;
+      badPct = 0;
+    }
+
+    final List<PieChartSectionData> pieSections = [];
+    if (totalMoods == 0) {
+      pieSections.add(
+        PieChartSectionData(
+          value: 1,
+          color: AppColors.border.withValues(alpha: 0.5),
+          radius: 16,
+          showTitle: false,
+        ),
+      );
+    } else {
+      if (greatCount > 0) {
+        pieSections.add(PieChartSectionData(
+          value: greatCount.toDouble(),
+          color: AppColors.success,
+          radius: 16,
+          showTitle: false,
+        ));
+      }
+      if (goodCount > 0) {
+        pieSections.add(PieChartSectionData(
+          value: goodCount.toDouble(),
+          color: Colors.blue,
+          radius: 16,
+          showTitle: false,
+        ));
+      }
+      if (okayCount > 0) {
+        pieSections.add(PieChartSectionData(
+          value: okayCount.toDouble(),
+          color: const Color(0xFFF4C059),
+          radius: 16,
+          showTitle: false,
+        ));
+      }
+      if (notGreatCount > 0) {
+        pieSections.add(PieChartSectionData(
+          value: notGreatCount.toDouble(),
+          color: AppColors.primaryPurple,
+          radius: 16,
+          showTitle: false,
+        ));
+      }
+      if (badCount > 0) {
+        pieSections.add(PieChartSectionData(
+          value: badCount.toDouble(),
+          color: AppColors.primaryPink,
+          radius: 16,
+          showTitle: false,
+        ));
+      }
+    }
+
+    // Card 2: Mood by cycle phase
+    final List<String> beforePeriodMoods = [];
+    final List<String> duringPeriodMoods = [];
+    final List<String> afterPeriodMoods = [];
+    final List<String> ovulationMoods = [];
+
+    for (final c in recentSubset) {
+      final cLen = c.cycleLength ?? user?.avgCycleLength ?? 28;
+      final pLen = c.periodLength ?? user?.avgPeriodLength ?? 5;
+      final cLogs = validLogs.where((l) =>
+          _normalizeMood(l.mood) != null &&
+          _isLogForCycle(l, c));
+
+      for (final l in cLogs) {
+        final mood = _normalizeMood(l.mood)!;
+        final d = DateTime(l.date.year, l.date.month, l.date.day)
+                .difference(DateTime(
+                  c.startDate.year,
+                  c.startDate.month,
+                  c.startDate.day,
+                ))
+                .inDays +
+            1;
+
+        if (d >= 1 && d <= pLen) {
+          duringPeriodMoods.add(mood);
+        } else if (d >= cLen - 3 && d <= cLen + 1) {
+          beforePeriodMoods.add(mood);
+        } else if (d >= 12 && d <= 16) {
+          ovulationMoods.add(mood);
+        } else if (d > pLen && d < 12) {
+          afterPeriodMoods.add(mood);
+        } else {
+          beforePeriodMoods.add(mood);
+        }
+      }
+    }
+
+    // Card 3: Dynamic insight text
+    final String insightText;
+    if (totalMoods == 0) {
+      insightText =
+          'Keep logging your daily mood to discover personalized emotional patterns across your cycle.';
+    } else {
+      final beforeLow =
+          beforePeriodMoods.where((m) => m == 'Not great' || m == 'Bad').length;
+      final duringLow =
+          duringPeriodMoods.where((m) => m == 'Not great' || m == 'Bad').length;
+      final afterHigh =
+          afterPeriodMoods.where((m) => m == 'Great' || m == 'Good').length;
+
+      if (beforeLow > 0 && beforeLow >= duringLow) {
+        insightText = 'You tend to feel lower mood before your period.';
+      } else if (duringLow > 0) {
+        insightText =
+            'You tend to feel lower mood during the first days of your period.';
+      } else if (afterHigh > 0) {
+        insightText =
+            'Your mood and energy tend to peak after your period during the follicular phase.';
+      } else {
+        insightText =
+            'Your mood remains mostly positive and stable across your cycle.';
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,7 +303,8 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
               showPageInfoDialog(
                 context,
                 title: 'Mood Trends',
-                description: 'Track how your mood changes across your cycle to identify patterns and emotional shifts.',
+                description:
+                    'Track how your mood changes across your cycle to identify patterns and emotional shifts.',
               );
             },
           ),
@@ -57,7 +318,8 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
             // Dropdown
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
@@ -112,6 +374,45 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                 ),
               ),
             ),
+
+            // Disclaimer banner when selected count is not yet reached
+            if (disclaimerText != null) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryPink.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryPink.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 15,
+                        color: AppColors.primaryPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          disclaimerText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primaryPurple,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // CARD 1: Mood distribution
@@ -144,38 +445,7 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                               sectionsSpace: 0,
                               centerSpaceRadius: 40,
                               startDegreeOffset: 270,
-                              sections: [
-                                PieChartSectionData(
-                                  value: moodData['great']!.toDouble(),
-                                  color: AppColors.success, // Great
-                                  radius: 16,
-                                  showTitle: false,
-                                ),
-                                PieChartSectionData(
-                                  value: moodData['good']!.toDouble(),
-                                  color: Colors.blue, // Good
-                                  radius: 16,
-                                  showTitle: false,
-                                ),
-                                PieChartSectionData(
-                                  value: moodData['okay']!.toDouble(),
-                                  color: const Color(0xFFF4C059), // Okay
-                                  radius: 16,
-                                  showTitle: false,
-                                ),
-                                PieChartSectionData(
-                                  value: moodData['not_great']!.toDouble(),
-                                  color: AppColors.primaryPurple, // Not Great
-                                  radius: 16,
-                                  showTitle: false,
-                                ),
-                                PieChartSectionData(
-                                  value: moodData['bad']!.toDouble(),
-                                  color: AppColors.primaryPink, // Bad
-                                  radius: 16,
-                                  showTitle: false,
-                                ),
-                              ],
+                              sections: pieSections,
                             ),
                           ),
                         ),
@@ -186,15 +456,16 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLegendRow('Great', '${moodData['great']}%', AppColors.success),
+                            _buildLegendRow('Great', '$greatPct%', AppColors.success),
                             const SizedBox(height: 8),
-                            _buildLegendRow('Good', '${moodData['good']}%', Colors.blue),
+                            _buildLegendRow('Good', '$goodPct%', Colors.blue),
                             const SizedBox(height: 8),
-                            _buildLegendRow('Okay', '${moodData['okay']}%', const Color(0xFFF4C059)),
+                            _buildLegendRow('Okay', '$okayPct%', const Color(0xFFF4C059)),
                             const SizedBox(height: 8),
-                            _buildLegendRow('Not Great', '${moodData['not_great']}%', AppColors.primaryPurple),
+                            _buildLegendRow(
+                                'Not Great', '$notGreatPct%', AppColors.primaryPurple),
                             const SizedBox(height: 8),
-                            _buildLegendRow('Bad', '${moodData['bad']}%', AppColors.primaryPink),
+                            _buildLegendRow('Bad', '$badPct%', AppColors.primaryPink),
                           ],
                         ),
                       ),
@@ -203,7 +474,7 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // CARD 2: Mood by cycle phase (average)
@@ -226,29 +497,103 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildTimelineMoodRow(
-                    Icons.sentiment_dissatisfied,
-                    'Not Great',
-                    'Usually 3-5 days before your period',
-                    'Before period',
-                    AppColors.primaryPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineMoodRow(
-                    Icons.mood_bad,
-                    'Bad',
-                    'Usually during the first 1-2 days of your period',
-                    'During period',
-                    AppColors.primaryPink,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineMoodRow(
-                    Icons.sentiment_very_satisfied,
-                    'Great',
-                    'Usually 2-5 days after your period',
-                    'After period',
-                    AppColors.success,
-                  ),
+                  if (beforePeriodMoods.isEmpty &&
+                      duringPeriodMoods.isEmpty &&
+                      afterPeriodMoods.isEmpty &&
+                      ovulationMoods.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.sentiment_satisfied_outlined,
+                              size: 44,
+                              color: AppColors.primaryPurple.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No mood patterns yet',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Log your mood in daily check-ins to see how your cycle affects how you feel.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else ...[
+                    if (beforePeriodMoods.isNotEmpty) ...[
+                      () {
+                        final mood = _getPredominantMood(beforePeriodMoods);
+                        final display = _getMoodDisplay(mood);
+                        return _buildTimelineMoodRow(
+                          display.$1,
+                          display.$3,
+                          'Usually 1-4 days before your period',
+                          'Before period',
+                          display.$2,
+                        );
+                      }(),
+                    ],
+                    if (duringPeriodMoods.isNotEmpty) ...[
+                      if (beforePeriodMoods.isNotEmpty) const SizedBox(height: 24),
+                      () {
+                        final mood = _getPredominantMood(duringPeriodMoods);
+                        final display = _getMoodDisplay(mood);
+                        return _buildTimelineMoodRow(
+                          display.$1,
+                          display.$3,
+                          'Usually during the first days of your period',
+                          'During period',
+                          display.$2,
+                        );
+                      }(),
+                    ],
+                    if (afterPeriodMoods.isNotEmpty) ...[
+                      if (beforePeriodMoods.isNotEmpty || duringPeriodMoods.isNotEmpty)
+                        const SizedBox(height: 24),
+                      () {
+                        final mood = _getPredominantMood(afterPeriodMoods);
+                        final display = _getMoodDisplay(mood);
+                        return _buildTimelineMoodRow(
+                          display.$1,
+                          display.$3,
+                          'Usually 2-5 days after your period',
+                          'After period',
+                          display.$2,
+                        );
+                      }(),
+                    ],
+                    if (ovulationMoods.isNotEmpty) ...[
+                      if (beforePeriodMoods.isNotEmpty ||
+                          duringPeriodMoods.isNotEmpty ||
+                          afterPeriodMoods.isNotEmpty)
+                        const SizedBox(height: 24),
+                      () {
+                        final mood = _getPredominantMood(ovulationMoods);
+                        final display = _getMoodDisplay(mood);
+                        return _buildTimelineMoodRow(
+                          display.$1,
+                          display.$3,
+                          'Usually mid-cycle around ovulation',
+                          'Ovulation',
+                          display.$2,
+                        );
+                      }(),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -280,9 +625,9 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                       const SizedBox(height: 16),
                       Padding(
                         padding: const EdgeInsets.only(right: 110.0),
-                        child: const Text(
-                          'You tend to feel lower mood 1-2 days before your period.',
-                          style: TextStyle(
+                        child: Text(
+                          insightText,
+                          style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.secondaryText,
                             height: 1.4,
@@ -293,7 +638,7 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
                   ),
                   Positioned(
                     right: 0,
-                    bottom: 0, // Sticks nicely to the bottom right of the card
+                    bottom: 0,
                     child: Image.asset(
                       'assets/images/low_mood_avatar_white_edited.jpg',
                       height: 100,
@@ -342,7 +687,13 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
     );
   }
 
-  Widget _buildTimelineMoodRow(IconData icon, String title, String subtitle, String badgeText, Color badgeColor) {
+  Widget _buildTimelineMoodRow(
+    IconData icon,
+    String title,
+    String subtitle,
+    String badgeText,
+    Color badgeColor,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -397,24 +748,5 @@ class _MoodTrendsPageState extends State<MoodTrendsPage> {
         ),
       ],
     );
-  }
-
-  Map<String, int> _getMoodData(int cycles) {
-    switch (cycles) {
-      case 3:
-        return {'great': 30, 'good': 40, 'okay': 15, 'not_great': 10, 'bad': 5};
-      case 4:
-        return {'great': 20, 'good': 30, 'okay': 25, 'not_great': 15, 'bad': 10};
-      case 5:
-        return {'great': 40, 'good': 25, 'okay': 20, 'not_great': 10, 'bad': 5};
-      case 6:
-        return {'great': 25, 'good': 35, 'okay': 20, 'not_great': 12, 'bad': 8};
-      case 7:
-        return {'great': 15, 'good': 45, 'okay': 25, 'not_great': 10, 'bad': 5};
-      case 8:
-        return {'great': 35, 'good': 30, 'okay': 15, 'not_great': 12, 'bad': 8};
-      default:
-        return {'great': 25, 'good': 35, 'okay': 20, 'not_great': 12, 'bad': 8};
-    }
   }
 }

@@ -61,3 +61,7 @@ final allDailyLogsStreamProvider = StreamProvider<List<DailyLog>>((ref) {
 final symptomsForLogStreamProvider = StreamProvider.family<List<DailySymptom>, String>((ref, logId) {
   return ref.watch(symptomRepositoryProvider).watchSymptomsForLog(logId);
 });
+
+final allSymptomsStreamProvider = StreamProvider<List<DailySymptom>>((ref) {
+  return ref.watch(symptomRepositoryProvider).watchAllSymptoms();
+});

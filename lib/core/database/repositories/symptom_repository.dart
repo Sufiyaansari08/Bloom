@@ -18,6 +18,18 @@ class SymptomRepository {
         .watch();
   }
 
+  Future<List<DailySymptom>> getAllSymptoms() async {
+    return (_db.select(_db.dailySymptoms)
+          ..where((t) => t.isDeleted.equals(false)))
+        .get();
+  }
+
+  Stream<List<DailySymptom>> watchAllSymptoms() {
+    return (_db.select(_db.dailySymptoms)
+          ..where((t) => t.isDeleted.equals(false)))
+        .watch();
+  }
+
   Future<void> setSymptomsForLog(String dailyLogId, List<DailySymptomsCompanion> symptoms) async {
     await _db.transaction(() async {
       // Soft-delete or remove existing symptoms for this log

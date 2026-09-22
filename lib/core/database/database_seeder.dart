@@ -6,6 +6,9 @@ class DatabaseSeeder {
   static const _uuid = Uuid();
 
   static Future<void> seedInitialData(AppDatabase db) async {
+    // Purge any legacy mock cycles if present
+    await purgeMockCycles(db);
+
     // Check if data already exists
     final existingUser = await (db.select(db.userProfiles)..limit(1)).getSingleOrNull();
     if (existingUser != null) {
@@ -31,78 +34,8 @@ class DatabaseSeeder {
       ),
     );
 
-    // 2. Seed 6 Historical Cycles + 1 Current Cycle
-    final cycleData = [
-      {'start': DateTime(2026, 2, 1), 'end': DateTime(2026, 2, 28), 'len': 28, 'period': 4},
-      {'start': DateTime(2026, 3, 1), 'end': DateTime(2026, 3, 30), 'len': 30, 'period': 5},
-      {'start': DateTime(2026, 3, 31), 'end': DateTime(2026, 4, 28), 'len': 29, 'period': 5},
-      {'start': DateTime(2026, 4, 29), 'end': DateTime(2026, 5, 29), 'len': 31, 'period': 6},
-      {'start': DateTime(2026, 5, 30), 'end': DateTime(2026, 6, 28), 'len': 30, 'period': 4},
-      {'start': DateTime(2026, 6, 29), 'end': DateTime(2026, 7, 27), 'len': 29, 'period': 5},
-      {'start': DateTime(2026, 7, 28), 'end': null, 'len': null, 'period': 5}, // Ongoing cycle
-    ];
+    // 2. Mock cycles removed to ensure fresh start and dynamic profile settings.
 
-    for (final c in cycleData) {
-      final cId = _uuid.v4();
-      final startDate = c['start'] as DateTime;
-      final endDate = c['end'] as DateTime?;
-      final cycleLen = c['len'] as int?;
-      final periodLen = c['period'] as int?;
-
-      await db.into(db.cycles).insert(
-        CyclesCompanion.insert(
-          id: cId,
-          userId: userId,
-          startDate: startDate,
-          endDate: Value(endDate),
-          cycleLength: Value(cycleLen),
-          periodLength: Value(periodLen),
-        ),
-      );
-
-      // Seed Period Daily Logs for each cycle
-      for (int day = 0; day < (periodLen ?? 5); day++) {
-        final logDate = startDate.add(Duration(days: day));
-        final logId = _uuid.v4();
-
-        await db.into(db.dailyLogs).insert(
-          DailyLogsCompanion.insert(
-            id: logId,
-            userId: userId,
-            cycleId: Value(cId),
-            date: logDate,
-            flowIntensity: Value(day == 0 ? 'medium' : (day == 1 ? 'heavy' : 'light')),
-            painLevel: Value(day < 2 ? 6 : 2),
-            mood: Value(day < 2 ? 'not_great' : 'good'),
-            sleepHours: const Value(6.5),
-            waterIntake: const Value('1.5 L'),
-            stressLevel: const Value(6),
-            activityLevel: const Value('moderate'),
-            remedies: Value(day < 2 ? 'Heating pad, Tea' : 'Rest'),
-            painAfter1Hr: Value(day < 2 ? 3 : 1),
-          ),
-        );
-
-        if (day < 2) {
-          await db.into(db.dailySymptoms).insert(
-            DailySymptomsCompanion.insert(
-              id: _uuid.v4(),
-              dailyLogId: logId,
-              symptomName: 'Cramps',
-              severity: const Value(7),
-            ),
-          );
-          await db.into(db.dailySymptoms).insert(
-            DailySymptomsCompanion.insert(
-              id: _uuid.v4(),
-              dailyLogId: logId,
-              symptomName: 'Bloating',
-              severity: const Value(5),
-            ),
-          );
-        }
-      }
-    }
 
     // 3. Seed Reminders
     final reminders = [
@@ -179,6 +112,45 @@ class DatabaseSeeder {
           generatedDate: now,
         ),
       );
+    }
+  }
+
+  /// Removes hardcoded legacy mock cycles (Feb 2026 - Jul 2026) and their associated logs/symptoms
+  static Future<void> purgeMockCycles(AppDatabase db) async {
+    final mockStartDates = [
+      DateTime(2026, 2, 1),
+      DateTime(2026, 3, 1),
+      DateTime(2026, 3, 31),
+      DateTime(2026, 4, 29),
+      DateTime(2026, 5, 30),
+      DateTime(2026, 6, 29),
+      DateTime(2026, 7, 28),
+    ];
+
+    try {
+      final cyclesToDelete = await (db.select(db.cycles)
+            ..where((t) => t.startDate.isIn(mockStartDates)))
+          .get();
+
+      if (cyclesToDelete.isNotEmpty) {
+        final cycleIds = cyclesToDelete.map((c) => c.id).toList();
+
+        final logsToDelete = await (db.select(db.dailyLogs)
+              ..where((t) => t.cycleId.isIn(cycleIds)))
+            .get();
+        final logIds = logsToDelete.map((l) => l.id).toList();
+
+        if (logIds.isNotEmpty) {
+          await (db.delete(db.dailySymptoms)
+                ..where((t) => t.dailyLogId.isIn(logIds)))
+              .go();
+          await (db.delete(db.dailyLogs)..where((t) => t.id.isIn(logIds))).go();
+        }
+
+        await (db.delete(db.cycles)..where((t) => t.id.isIn(cycleIds))).go();
+      }
+    } catch (_) {
+      // Ignore if table or columns not ready during migrations
     }
   }
 }

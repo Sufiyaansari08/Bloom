@@ -1,17 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
+import '../../../../core/database/database_providers.dart';
 import '../widgets/insights_hero_card.dart';
 import '../widgets/insights_grid_button.dart';
 import '../../../doctor_report/presentation/widgets/doctor_report_banner.dart';
 import '../widgets/bloom_pro_banner.dart';
 
-class InsightsPage extends StatelessWidget {
+class InsightsPage extends ConsumerWidget {
   const InsightsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cyclesAsync = ref.watch(allCyclesStreamProvider);
+    final cycles = cyclesAsync.value ?? [];
+    final completedCycles = cycles
+        .where((c) =>
+            !c.isDeleted &&
+            c.endDate != null &&
+            c.cycleLength != null &&
+            c.cycleLength! > 0)
+        .toList();
+
+    final String cycleSubtitle;
+    if (completedCycles.isEmpty) {
+      cycleSubtitle = 'Based on onboarding profile';
+    } else if (completedCycles.length == 1) {
+      cycleSubtitle = 'Based on your last cycle';
+    } else {
+      final count = completedCycles.length > 6 ? 6 : completedCycles.length;
+      cycleSubtitle = 'Based on your last $count cycles';
+    }
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -40,9 +62,9 @@ class InsightsPage extends StatelessWidget {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Text(
-                    'Based on your last 6 cycles',
-                    style: TextStyle(
+                  Text(
+                    cycleSubtitle,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.secondaryText,
                     ),
@@ -53,7 +75,9 @@ class InsightsPage extends StatelessWidget {
                       showPageInfoDialog(
                         context,
                         title: 'Insights Overview',
-                        description: 'This dashboard provides a quick overview of your health patterns based on your last 6 cycles.',
+                        description: completedCycles.isEmpty
+                            ? 'This dashboard currently displays your baseline health profile. As you log periods and complete cycles, your personal averages and patterns will appear here.'
+                            : 'This dashboard provides a comprehensive analysis of your health patterns, cycle regularity, and symptom trends based on your logged history.',
                       );
                     },
                     child: Icon(

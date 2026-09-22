@@ -42,6 +42,7 @@ void main() async {
 
   final db = AppDatabase();
   await DatabaseSeeder.seedInitialData(db);
+  await DatabaseSeeder.purgeMockCycles(db);
 
   runApp(
     ProviderScope(

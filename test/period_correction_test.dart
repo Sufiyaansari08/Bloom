@@ -10,6 +10,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   late AppDatabase db;
@@ -431,7 +432,8 @@ void main() {
     // Keep calendarProvider alive
     container.listen(calendarProvider, (_, __) {});
 
-    final today = DateTime(2026, 9, 12);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     // User logs period for today
     final repo = container.read(dailyLogRepositoryProvider);
@@ -443,6 +445,8 @@ void main() {
         flowIntensity: const drift.Value('Medium'),
       ),
     );
+    final cycleRepo = container.read(cycleRepositoryProvider);
+    await cycleRepo.getOrCreateCycleForPeriodDate(today);
 
     // Allow streams to emit
     await Future.delayed(const Duration(milliseconds: 500));
@@ -450,12 +454,12 @@ void main() {
     final calState = container.read(calendarProvider);
     print('calState.periodDays: ${calState.periodDays}');
     print('calState.ovulationDay: ${calState.ovulationDay}');
-    expect(calState.ovulationDay, DateTime(2026, 9, 27));
-    expect(calState.nextPeriodStartDate, DateTime(2026, 10, 11));
+    expect(calState.ovulationDay, today.add(const Duration(days: 15)));
+    expect(calState.nextPeriodStartDate, today.add(const Duration(days: 29)));
 
     // Fertile days for this cycle must start on Sep 25
     final firstFertileDay = calState.fertileDays.firstWhere((d) => !d.isBefore(today));
-    expect(firstFertileDay, DateTime(2026, 9, 25));
+    expect(firstFertileDay, today.add(const Duration(days: 13)));
 
     // Check Menstrual Summary text isolation logic
     final upcoming = calState.fertileDays.where((d) => !d.isBefore(today.subtract(const Duration(days: 5)))).toList();
@@ -469,20 +473,24 @@ void main() {
     }
     final fStart = firstWindow.first;
     final fEnd = firstWindow.last;
-    expect(fStart, DateTime(2026, 9, 25));
-    expect(fEnd, DateTime(2026, 9, 30));
+    expect(fStart, today.add(const Duration(days: 13)));
+    expect(fEnd, today.add(const Duration(days: 18)));
 
     final summaryLabel = fStart.month == fEnd.month
-        ? 'Fertile window ${fStart.day}-${fEnd.day} September'
-        : 'Fertile window ${fStart.day} - ${fEnd.day}';
-    expect(summaryLabel, 'Fertile window 25-30 September');
+        ? 'Fertile window ${fStart.day}-${fEnd.day} ${DateFormat('MMMM').format(fStart)}'
+        : 'Fertile window ${fStart.day} ${DateFormat('MMMM').format(fStart)} - ${fEnd.day} ${DateFormat('MMMM').format(fEnd)}';
+    
+    final expectedSummaryLabel = fStart.month == fEnd.month
+        ? 'Fertile window ${fStart.day}-${fEnd.day} ${DateFormat('MMMM').format(fStart)}'
+        : 'Fertile window ${fStart.day} ${DateFormat('MMMM').format(fStart)} - ${fEnd.day} ${DateFormat('MMMM').format(fEnd)}';
+    expect(summaryLabel, expectedSummaryLabel);
 
     // Home Card also reflects Sep 12 as Cycle Day 1
     final homeState = container.read(homeProvider);
     expect(homeState.isPeriodOngoing, isTrue);
     expect(homeState.cycleDay, 1);
-    expect(homeState.periodDateRange, 'Oct 11 - Oct 15');
-    expect(homeState.fertileWindowRange, 'Sep 25 - Sep 30');
+    expect(homeState.periodDateRange, '${DateFormat('MMM d').format(today.add(const Duration(days: 29)))} - ${DateFormat('MMM d').format(today.add(const Duration(days: 33)))}');
+    expect(homeState.fertileWindowRange, '${DateFormat('MMM d').format(today.add(const Duration(days: 13)))} - ${DateFormat('MMM d').format(today.add(const Duration(days: 18)))}');
 
     await testDb.close();
   });

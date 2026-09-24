@@ -42,33 +42,43 @@ class CalendarPage extends ConsumerWidget {
     int? cycleDayForSelected;
     bool isCycleStartForSelected = false;
 
-    // Check all recorded cycles to see if selectedDay falls within any cycle
-    for (final cycle in allCycles) {
-      final cleanStart = DateTime(
-        cycle.startDate.year,
-        cycle.startDate.month,
-        cycle.startDate.day,
-      );
-      if (cycle.endDate != null) {
-        final cleanEnd = DateTime(
-          cycle.endDate!.year,
-          cycle.endDate!.month,
-          cycle.endDate!.day,
-        );
-        if (!selectedDayClean.isBefore(cleanStart) && !selectedDayClean.isAfter(cleanEnd)) {
-          final diff = selectedDayClean.difference(cleanStart).inDays;
-          cycleDayForSelected = diff + 1;
-          isCycleStartForSelected = (diff == 0);
-          break;
+    // 1. Gather all official database cycle starts
+    final List<DateTime> cycleStarts = allCycles
+        .map((c) => DateTime(c.startDate.year, c.startDate.month, c.startDate.day))
+        .toList();
+
+    // 2. Discover "missing" cycles from daily logs that were never closed in DB
+    final loggedPeriodDates = allDailyLogs
+        .where((l) => l.flowIntensity != null && l.flowIntensity != 'None')
+        .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+        .toList()
+      ..sort((a, b) => a.compareTo(b));
+
+    if (loggedPeriodDates.isNotEmpty) {
+      DateTime currentPeriodStart = loggedPeriodDates.first;
+      if (!cycleStarts.contains(currentPeriodStart)) cycleStarts.add(currentPeriodStart);
+
+      for (int i = 1; i < loggedPeriodDates.length; i++) {
+        final d = loggedPeriodDates[i];
+        if (d.difference(currentPeriodStart).inDays >= 12) {
+          currentPeriodStart = d;
+          if (!cycleStarts.contains(currentPeriodStart)) cycleStarts.add(currentPeriodStart);
         }
-      } else {
-        // Ongoing cycle
-        if (!selectedDayClean.isBefore(cleanStart)) {
-          final diff = selectedDayClean.difference(cleanStart).inDays;
-          cycleDayForSelected = diff + 1;
-          isCycleStartForSelected = (diff == 0);
-          break;
-        }
+      }
+    }
+
+    cycleStarts.sort((a, b) => a.compareTo(b));
+
+    // 3. Find which cycle the selectedDay belongs to
+    for (int i = 0; i < cycleStarts.length; i++) {
+      final start = cycleStarts[i];
+      final nextStart = (i + 1 < cycleStarts.length) ? cycleStarts[i + 1] : null;
+
+      if (!selectedDayClean.isBefore(start) && (nextStart == null || selectedDayClean.isBefore(nextStart))) {
+        final diff = selectedDayClean.difference(start).inDays;
+        cycleDayForSelected = diff + 1;
+        isCycleStartForSelected = (diff == 0);
+        break;
       }
     }
 

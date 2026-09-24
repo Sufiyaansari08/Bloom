@@ -68,7 +68,7 @@ final homeProvider = Provider<HomeState>((ref) {
         }
       }
       if (latestPeriodStart.isAfter(start) &&
-          latestPeriodStart.difference(start).inDays >= 15) {
+          latestPeriodStart.difference(start).inDays >= 12) {
         start = latestPeriodStart;
       }
     }

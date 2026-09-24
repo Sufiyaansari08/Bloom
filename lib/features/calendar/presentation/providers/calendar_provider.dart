@@ -150,7 +150,7 @@ class CalendarNotifier extends StateNotifier<CalendarState> {
         }
       }
       if (latestPeriodStart.isAfter(cycleStart) &&
-          latestPeriodStart.difference(cycleStart).inDays >= 15) {
+          latestPeriodStart.difference(cycleStart).inDays >= 12) {
         cycleStart = latestPeriodStart;
       }
     }

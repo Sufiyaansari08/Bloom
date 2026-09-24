@@ -231,5 +231,67 @@ void main() {
       // Disclaimer should now be gone!
       expect(find.textContaining('not yet completed'), findsNothing);
     });
+
+    testWidgets('Selecting Current cycle filters lifestyle metrics to active cycle', (tester) async {
+      final ongoingCycle = Cycle(
+        id: 'curr_cycle',
+        userId: 'test_user',
+        startDate: DateTime.now().subtract(const Duration(days: 3)),
+        endDate: null,
+        cycleLength: null,
+        periodLength: null,
+        isPredicted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        isSynced: false,
+        isDeleted: false,
+      );
+
+      final logs = [
+        createTestLog(
+          id: 'log_curr1',
+          cycleId: 'curr_cycle',
+          date: DateTime.now().subtract(const Duration(days: 1)),
+          sleepHours: 8.0,
+          waterIntake: '2.0 L',
+          activityLevel: 'Moderate',
+          stressLevel: 3,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            allCyclesStreamProvider.overrideWith((ref) => Stream.value([ongoingCycle])),
+            allDailyLogsStreamProvider.overrideWith((ref) => Stream.value(logs)),
+            allSymptomsStreamProvider.overrideWith((ref) => Stream.value(<DailySymptom>[])),
+          ],
+          child: const MaterialApp(
+            home: LifestyleInsightsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open dropdown and select 'Current cycle'
+      await tester.tap(find.text('Last 6 cycles'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Current cycle'), findsOneWidget);
+      await tester.tap(find.text('Current cycle'));
+      await tester.pumpAndSettle();
+
+      // Header updates to Current cycle
+      expect(find.text('Current cycle'), findsOneWidget);
+
+      // Averages calculated from active cycle log
+      expect(find.text('8h'), findsOneWidget);
+      expect(find.text('2.0 L'), findsOneWidget);
+      expect(find.text('Moderate'), findsOneWidget);
+      expect(find.text('3.0 / 10'), findsOneWidget);
+
+      // Disclaimer is cleared
+      expect(find.textContaining('not yet completed'), findsNothing);
+    });
   });
 }

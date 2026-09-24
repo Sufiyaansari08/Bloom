@@ -229,5 +229,117 @@ void main() {
       // Disclaimer should be hidden
       expect(find.textContaining('not yet completed'), findsNothing);
     });
+
+    testWidgets('Selecting Current cycle filters moods to active cycle and displays distribution', (tester) async {
+      final ongoingCycle = Cycle(
+        id: 'curr_cycle',
+        userId: 'test_user',
+        startDate: DateTime.now().subtract(const Duration(days: 3)),
+        endDate: null,
+        cycleLength: null,
+        periodLength: null,
+        isPredicted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        isSynced: false,
+        isDeleted: false,
+      );
+
+      final logs = [
+        createTestLog(id: 'log_m1', cycleId: 'curr_cycle', date: DateTime.now().subtract(const Duration(days: 1)), mood: 'Great'),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileStreamProvider.overrideWith((ref) => Stream.value(createTestProfile())),
+            allCyclesStreamProvider.overrideWith((ref) => Stream.value([ongoingCycle])),
+            allDailyLogsStreamProvider.overrideWith((ref) => Stream.value(logs)),
+          ],
+          child: const MaterialApp(
+            home: MoodTrendsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open dropdown and select 'Current cycle'
+      await tester.tap(find.text('Last 6 cycles'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Current cycle'), findsOneWidget);
+      await tester.tap(find.text('Current cycle'));
+      await tester.pumpAndSettle();
+
+      // Header updates to Current cycle
+      expect(find.text('Current cycle'), findsOneWidget);
+
+      // Great mood is 100%
+      expect(find.text('Great'), findsWidgets);
+      expect(find.text('100%'), findsOneWidget);
+
+      // Disclaimer is cleared
+      expect(find.textContaining('not yet completed'), findsNothing);
+    });
+
+    testWidgets('When mood before period is Good, Card 2 shows Good and Card 3 does not show lower mood', (tester) async {
+      final ongoingCycle = Cycle(
+        id: 'cycle_good_before',
+        userId: 'test_user',
+        startDate: DateTime.now().subtract(const Duration(days: 26)),
+        endDate: null,
+        cycleLength: null,
+        periodLength: null,
+        isPredicted: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        isSynced: false,
+        isDeleted: false,
+      );
+
+      // User logged 'Good' on Day 25, 26, 27 (1-4 days before next period)
+      final logs = [
+        createTestLog(
+          id: 'log_g1',
+          cycleId: 'cycle_good_before',
+          date: DateTime.now().subtract(const Duration(days: 2)), // Day 25
+          mood: 'Good',
+        ),
+        createTestLog(
+          id: 'log_g2',
+          cycleId: 'cycle_good_before',
+          date: DateTime.now().subtract(const Duration(days: 1)), // Day 26
+          mood: 'Good',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userProfileStreamProvider.overrideWith((ref) => Stream.value(createTestProfile())),
+            allCyclesStreamProvider.overrideWith((ref) => Stream.value([ongoingCycle])),
+            allDailyLogsStreamProvider.overrideWith((ref) => Stream.value(logs)),
+          ],
+          child: const MaterialApp(
+            home: MoodTrendsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open dropdown and select 'Current cycle'
+      await tester.tap(find.text('Last 6 cycles'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Current cycle'));
+      await tester.pumpAndSettle();
+
+      // Card 2 must show Good for Before period
+      expect(find.text('Good'), findsWidgets);
+      expect(find.text('Usually 1-4 days before your period'), findsOneWidget);
+
+      // Card 3 must NOT say lower mood before period!
+      expect(find.text('You tend to feel lower mood before your period.'), findsNothing);
+      expect(find.text('Your mood tends to stay positive and resilient before your period.'), findsOneWidget);
+    });
   });
 }

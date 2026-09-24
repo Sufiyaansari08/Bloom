@@ -26,14 +26,16 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
       cycle.startDate.month,
       cycle.startDate.day,
     );
-    final endDate = cycle.endDate != null
-        ? DateTime(
-            cycle.endDate!.year,
-            cycle.endDate!.month,
-            cycle.endDate!.day,
-          )
-        : startDate.add(Duration(days: (cycle.cycleLength ?? 28) - 1));
-    return !logDate.isBefore(startDate) && !logDate.isAfter(endDate);
+    if (logDate.isBefore(startDate)) return false;
+    if (cycle.endDate != null) {
+      final endDate = DateTime(
+        cycle.endDate!.year,
+        cycle.endDate!.month,
+        cycle.endDate!.day,
+      );
+      return !logDate.isAfter(endDate);
+    }
+    return true;
   }
 
   @override
@@ -42,63 +44,143 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
     final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
     final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
 
-    final completedCycles = cycles
+    final activeCycles = cycles.where((c) => !c.isDeleted).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final completedCycles = activeCycles
         .where((c) =>
-            !c.isDeleted &&
             c.endDate != null &&
             c.cycleLength != null &&
             c.cycleLength! > 0)
-        .toList()
-      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+        .toList();
 
-    // Disclaimer if user selected a number of cycles not yet reached
+    final currentCycle = activeCycles.where((c) => c.endDate == null).lastOrNull ??
+        activeCycles.lastOrNull;
+
+    final List<Cycle> targetedCycles;
     final String? disclaimerText;
-    if (completedCycles.isEmpty) {
-      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
-    } else if (completedCycles.length < _selectedCycles) {
-      disclaimerText =
-          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
-    } else {
-      disclaimerText = null;
-    }
 
-    // Subset of completed cycles
-    final recentSubset = completedCycles.length > _selectedCycles
-        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
-        : completedCycles;
-
-    final validLogs = allLogs.where((l) => !l.isDeleted).toList();
-
-    // Calculate cycle pain averages and spots for the line chart
-    final List<double> cycleAverages = [];
-    final List<FlSpot> spots = [];
-    final Map<int, double> cyclesWithPain = {};
-
-    for (int i = 0; i < recentSubset.length; i++) {
-      final c = recentSubset[i];
-      final cLogs = validLogs
-          .where((l) =>
-              l.painLevel != null &&
-              l.painLevel! > 0 &&
-              _isLogForCycle(l, c))
-          .toList();
-
-      if (cLogs.isNotEmpty) {
-        final cAvg = cLogs.map((l) => l.painLevel!).reduce((a, b) => a + b) /
-            cLogs.length;
-        final rounded = double.parse(cAvg.toStringAsFixed(1));
-        cycleAverages.add(rounded);
-        spots.add(FlSpot((i + 1).toDouble(), rounded));
-        cyclesWithPain[i + 1] = rounded;
+    if (_selectedCycles == 1) {
+      if (currentCycle != null) {
+        targetedCycles = [currentCycle];
+        disclaimerText = null;
       } else {
-        cycleAverages.add(0.0);
-        spots.add(FlSpot((i + 1).toDouble(), 0.0));
+        targetedCycles = [];
+        disclaimerText = 'No cycle data available';
+      }
+    } else {
+      if (completedCycles.isEmpty) {
+        disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+        targetedCycles = [];
+      } else if (completedCycles.length < _selectedCycles) {
+        disclaimerText =
+            'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+        targetedCycles = completedCycles;
+      } else {
+        disclaimerText = null;
+        targetedCycles = completedCycles.sublist(
+            completedCycles.length - _selectedCycles);
       }
     }
 
-    // All pain logs belonging to the recent completed cycles
+    final validLogs = allLogs.where((l) => !l.isDeleted).toList();
+
+    // Calculate cycle or weekly pain averages and spots for the line chart
+    final List<double> cycleAverages = [];
+    final List<FlSpot> spots = [];
+    final Map<int, double> cyclesWithPain = {};
+    int chartMaxX = _selectedCycles;
+
+    if (_selectedCycles == 1) {
+      if (currentCycle != null) {
+        final int avgCompletedLen = completedCycles.isNotEmpty
+            ? (completedCycles
+                        .map((c) => c.cycleLength ?? 28)
+                        .reduce((a, b) => a + b) /
+                    completedCycles.length)
+                .round()
+            : (user?.avgCycleLength ?? 28);
+        final int declaredLen = user?.avgCycleLength ?? 28;
+        final int currentLen = currentCycle.cycleLength ?? 0;
+        final int effectiveCycleLen =
+            math.max(currentLen, math.max(avgCompletedLen, declaredLen));
+
+        // Allow 5 or 6 weeks only if the user's cycle length is 36-37+ days (or 29-35 days for 5 weeks)
+        final int maxCycleWeeks;
+        if (effectiveCycleLen >= 36) {
+          maxCycleWeeks = 6;
+        } else if (effectiveCycleLen >= 29) {
+          maxCycleWeeks = 5;
+        } else {
+          maxCycleWeeks = 4;
+        }
+
+        final cLogs = validLogs
+            .where((l) =>
+                l.painLevel != null &&
+                l.painLevel! > 0 &&
+                _isLogForCycle(l, currentCycle))
+            .toList();
+
+        final Map<int, List<int>> weekPainMap = {};
+        for (final l in cLogs) {
+          final d = DateTime(l.date.year, l.date.month, l.date.day)
+                  .difference(DateTime(
+                    currentCycle.startDate.year,
+                    currentCycle.startDate.month,
+                    currentCycle.startDate.day,
+                  ))
+                  .inDays +
+              1;
+          final w = math.max(1, math.min(maxCycleWeeks, ((d - 1) ~/ 7) + 1));
+          weekPainMap.putIfAbsent(w, () => []).add(l.painLevel!);
+        }
+
+        chartMaxX = maxCycleWeeks;
+
+        if (cLogs.isNotEmpty) {
+          for (int w = 1; w <= maxCycleWeeks; w++) {
+            if (weekPainMap.containsKey(w)) {
+              final wAvg = weekPainMap[w]!.reduce((a, b) => a + b) /
+                  weekPainMap[w]!.length;
+              final rounded = double.parse(wAvg.toStringAsFixed(1));
+              spots.add(FlSpot(w.toDouble(), rounded));
+              cyclesWithPain[w] = rounded;
+            } else {
+              spots.add(FlSpot(w.toDouble(), 0.0));
+            }
+          }
+        }
+      } else {
+        chartMaxX = 4;
+      }
+    } else {
+      for (int i = 0; i < targetedCycles.length; i++) {
+        final c = targetedCycles[i];
+        final cLogs = validLogs
+            .where((l) =>
+                l.painLevel != null &&
+                l.painLevel! > 0 &&
+                _isLogForCycle(l, c))
+            .toList();
+
+        if (cLogs.isNotEmpty) {
+          final cAvg = cLogs.map((l) => l.painLevel!).reduce((a, b) => a + b) /
+              cLogs.length;
+          final rounded = double.parse(cAvg.toStringAsFixed(1));
+          cycleAverages.add(rounded);
+          spots.add(FlSpot((i + 1).toDouble(), rounded));
+          cyclesWithPain[i + 1] = rounded;
+        } else {
+          cycleAverages.add(0.0);
+          spots.add(FlSpot((i + 1).toDouble(), 0.0));
+        }
+      }
+    }
+
+    // All pain logs belonging to targeted cycles
     final List<DailyLog> allRecentPainLogs = [
-      for (final c in recentSubset)
+      for (final c in targetedCycles)
         ...validLogs.where((l) =>
             l.painLevel != null &&
             l.painLevel! > 0 &&
@@ -135,13 +217,13 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
         if (entry.value < minEntry.value) minEntry = entry;
       }
       highestPainVal = maxEntry.value.toStringAsFixed(1);
-      highestPainSub = 'Cycle ${maxEntry.key}';
+      highestPainSub = _selectedCycles == 1 ? 'Week ${maxEntry.key}' : 'Cycle ${maxEntry.key}';
       lowestPainVal = minEntry.value.toStringAsFixed(1);
-      lowestPainSub = 'Cycle ${minEntry.key}';
+      lowestPainSub = _selectedCycles == 1 ? 'Week ${minEntry.key}' : 'Cycle ${minEntry.key}';
 
       // Most painful cycle day calculation
       final Map<int, List<int>> painByCycleDay = {};
-      for (final c in recentSubset) {
+      for (final c in targetedCycles) {
         final cLogs = validLogs.where((l) =>
             l.painLevel != null &&
             l.painLevel! > 0 &&
@@ -194,7 +276,7 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
     final List<int> afterPeriodPain = [];
     final List<int> ovulationPain = [];
 
-    for (final c in recentSubset) {
+    for (final c in targetedCycles) {
       final cLen = c.cycleLength ?? user?.avgCycleLength ?? 28;
       final pLen = c.periodLength ?? user?.avgPeriodLength ?? 5;
       final cLogs = validLogs.where((l) =>
@@ -212,7 +294,11 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
                 .inDays +
             1;
 
-        if (d >= 1 && d <= pLen) {
+        final hasFlow = l.flowIntensity != null &&
+            l.flowIntensity!.isNotEmpty &&
+            l.flowIntensity != 'None';
+
+        if (hasFlow || (d >= 1 && d <= pLen)) {
           duringPeriodPain.add(l.painLevel!);
         } else if (d >= cLen - 3 && d <= cLen + 1) {
           beforePeriodPain.add(l.painLevel!);
@@ -333,11 +419,11 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
+                    return [1, 2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(
-                          'Last $value cycles',
+                          value == 1 ? 'Current cycle' : 'Last $value cycles',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.text,
@@ -350,7 +436,9 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Last $_selectedCycles cycles',
+                        _selectedCycles == 1
+                            ? 'Current cycle'
+                            : 'Last $_selectedCycles cycles',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.text,
@@ -518,13 +606,16 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
                               getTitlesWidget: (value, meta) {
                                 final intVal = value.toInt();
                                 if (intVal >= 1 &&
-                                    intVal <= _selectedCycles &&
+                                    intVal <= chartMaxX &&
                                     value == intVal.toDouble()) {
+                                  final label = _selectedCycles == 1
+                                      ? 'W$intVal'
+                                      : 'C$intVal';
                                   return SideTitleWidget(
                                     meta: meta,
                                     space: 8,
                                     child: Text(
-                                      'C$intVal',
+                                      label,
                                       style: const TextStyle(
                                         color: AppColors.secondaryText,
                                         fontSize: 10,
@@ -539,7 +630,7 @@ class _PainInsightsPageState extends ConsumerState<PainInsightsPage> {
                         ),
                         borderData: FlBorderData(show: false),
                         minX: 1,
-                        maxX: _selectedCycles.toDouble(),
+                        maxX: chartMaxX.toDouble(),
                         minY: 0,
                         maxY: 10,
                         lineBarsData: spots.isEmpty

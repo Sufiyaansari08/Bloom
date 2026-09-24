@@ -25,14 +25,16 @@ class _LifestyleInsightsPageState extends ConsumerState<LifestyleInsightsPage> {
       cycle.startDate.month,
       cycle.startDate.day,
     );
-    final endDate = cycle.endDate != null
-        ? DateTime(
-            cycle.endDate!.year,
-            cycle.endDate!.month,
-            cycle.endDate!.day,
-          )
-        : startDate.add(Duration(days: (cycle.cycleLength ?? 28) - 1));
-    return !logDate.isBefore(startDate) && !logDate.isAfter(endDate);
+    if (logDate.isBefore(startDate)) return false;
+    if (cycle.endDate != null) {
+      final endDate = DateTime(
+        cycle.endDate!.year,
+        cycle.endDate!.month,
+        cycle.endDate!.day,
+      );
+      return !logDate.isAfter(endDate);
+    }
+    return true;
   }
 
   double? _parseWaterLiters(String? raw) {
@@ -52,36 +54,50 @@ class _LifestyleInsightsPageState extends ConsumerState<LifestyleInsightsPage> {
     final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
     final allSymptoms = ref.watch(allSymptomsStreamProvider).value ?? [];
 
-    final completedCycles = cycles
+    final activeCycles = cycles.where((c) => !c.isDeleted).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final completedCycles = activeCycles
         .where((c) =>
-            !c.isDeleted &&
             c.endDate != null &&
             c.cycleLength != null &&
             c.cycleLength! > 0)
-        .toList()
-      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+        .toList();
 
-    // Disclaimer if user selected a number of cycles not yet reached
+    final currentCycle = activeCycles.where((c) => c.endDate == null).lastOrNull ??
+        activeCycles.lastOrNull;
+
+    final List<Cycle> targetedCycles;
     final String? disclaimerText;
-    if (completedCycles.isEmpty) {
-      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
-    } else if (completedCycles.length < _selectedCycles) {
-      disclaimerText =
-          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
-    } else {
-      disclaimerText = null;
-    }
 
-    // Subset of completed cycles
-    final recentSubset = completedCycles.length > _selectedCycles
-        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
-        : completedCycles;
+    if (_selectedCycles == 1) {
+      if (currentCycle != null) {
+        targetedCycles = [currentCycle];
+        disclaimerText = null;
+      } else {
+        targetedCycles = [];
+        disclaimerText = 'No cycle data available';
+      }
+    } else {
+      if (completedCycles.isEmpty) {
+        disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+        targetedCycles = [];
+      } else if (completedCycles.length < _selectedCycles) {
+        disclaimerText =
+            'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+        targetedCycles = completedCycles;
+      } else {
+        disclaimerText = null;
+        targetedCycles = completedCycles.sublist(
+            completedCycles.length - _selectedCycles);
+      }
+    }
 
     final validLogs = allLogs.where((l) => !l.isDeleted).toList();
 
-    // Relevant logs for selected completed cycles
+    // Relevant logs for targeted cycles
     final List<DailyLog> relevantLogs = [
-      for (final c in recentSubset)
+      for (final c in targetedCycles)
         ...validLogs.where((l) => _isLogForCycle(l, c)),
     ];
 
@@ -379,11 +395,11 @@ class _LifestyleInsightsPageState extends ConsumerState<LifestyleInsightsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
+                    return [1, 2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(
-                          'Last $value cycles',
+                          value == 1 ? 'Current cycle' : 'Last $value cycles',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.text,
@@ -396,7 +412,9 @@ class _LifestyleInsightsPageState extends ConsumerState<LifestyleInsightsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Last $_selectedCycles cycles',
+                        _selectedCycles == 1
+                            ? 'Current cycle'
+                            : 'Last $_selectedCycles cycles',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.text,

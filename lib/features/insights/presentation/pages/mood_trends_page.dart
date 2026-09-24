@@ -25,14 +25,16 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
       cycle.startDate.month,
       cycle.startDate.day,
     );
-    final endDate = cycle.endDate != null
-        ? DateTime(
-            cycle.endDate!.year,
-            cycle.endDate!.month,
-            cycle.endDate!.day,
-          )
-        : startDate.add(Duration(days: (cycle.cycleLength ?? 28) - 1));
-    return !logDate.isBefore(startDate) && !logDate.isAfter(endDate);
+    if (logDate.isBefore(startDate)) return false;
+    if (cycle.endDate != null) {
+      final endDate = DateTime(
+        cycle.endDate!.year,
+        cycle.endDate!.month,
+        cycle.endDate!.day,
+      );
+      return !logDate.isAfter(endDate);
+    }
+    return true;
   }
 
   String? _normalizeMood(String? raw) {
@@ -88,36 +90,50 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
     final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
     final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
 
-    final completedCycles = cycles
+    final activeCycles = cycles.where((c) => !c.isDeleted).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final completedCycles = activeCycles
         .where((c) =>
-            !c.isDeleted &&
             c.endDate != null &&
             c.cycleLength != null &&
             c.cycleLength! > 0)
-        .toList()
-      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+        .toList();
 
-    // Disclaimer if user selected a number of cycles not yet reached
+    final currentCycle = activeCycles.where((c) => c.endDate == null).lastOrNull ??
+        activeCycles.lastOrNull;
+
+    final List<Cycle> targetedCycles;
     final String? disclaimerText;
-    if (completedCycles.isEmpty) {
-      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
-    } else if (completedCycles.length < _selectedCycles) {
-      disclaimerText =
-          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
-    } else {
-      disclaimerText = null;
-    }
 
-    // Subset of completed cycles
-    final recentSubset = completedCycles.length > _selectedCycles
-        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
-        : completedCycles;
+    if (_selectedCycles == 1) {
+      if (currentCycle != null) {
+        targetedCycles = [currentCycle];
+        disclaimerText = null;
+      } else {
+        targetedCycles = [];
+        disclaimerText = 'No cycle data available';
+      }
+    } else {
+      if (completedCycles.isEmpty) {
+        disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+        targetedCycles = [];
+      } else if (completedCycles.length < _selectedCycles) {
+        disclaimerText =
+            'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+        targetedCycles = completedCycles;
+      } else {
+        disclaimerText = null;
+        targetedCycles = completedCycles.sublist(
+            completedCycles.length - _selectedCycles);
+      }
+    }
 
     final validLogs = allLogs.where((l) => !l.isDeleted).toList();
 
-    // All mood logs belonging to the recent completed cycles
+    // All mood logs belonging to the targeted cycles
     final List<DailyLog> relevantMoodLogs = [
-      for (final c in recentSubset)
+      for (final c in targetedCycles)
         ...validLogs.where((l) =>
             _normalizeMood(l.mood) != null &&
             _isLogForCycle(l, c)),
@@ -219,7 +235,7 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
     final List<String> afterPeriodMoods = [];
     final List<String> ovulationMoods = [];
 
-    for (final c in recentSubset) {
+    for (final c in targetedCycles) {
       final cLen = c.cycleLength ?? user?.avgCycleLength ?? 28;
       final pLen = c.periodLength ?? user?.avgPeriodLength ?? 5;
       final cLogs = validLogs.where((l) =>
@@ -237,7 +253,11 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
                 .inDays +
             1;
 
-        if (d >= 1 && d <= pLen) {
+        final hasFlow = l.flowIntensity != null &&
+            l.flowIntensity!.isNotEmpty &&
+            l.flowIntensity != 'None';
+
+        if (hasFlow || (d >= 1 && d <= pLen)) {
           duringPeriodMoods.add(mood);
         } else if (d >= cLen - 3 && d <= cLen + 1) {
           beforePeriodMoods.add(mood);
@@ -251,27 +271,50 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
       }
     }
 
-    // Card 3: Dynamic insight text
+    // Card 3: Dynamic insight text aligned with predominant phase moods
     final String insightText;
     if (totalMoods == 0) {
       insightText =
           'Keep logging your daily mood to discover personalized emotional patterns across your cycle.';
     } else {
-      final beforeLow =
-          beforePeriodMoods.where((m) => m == 'Not great' || m == 'Bad').length;
-      final duringLow =
-          duringPeriodMoods.where((m) => m == 'Not great' || m == 'Bad').length;
-      final afterHigh =
-          afterPeriodMoods.where((m) => m == 'Great' || m == 'Good').length;
+      final beforePredominant = beforePeriodMoods.isNotEmpty
+          ? _getPredominantMood(beforePeriodMoods)
+          : null;
+      final duringPredominant = duringPeriodMoods.isNotEmpty
+          ? _getPredominantMood(duringPeriodMoods)
+          : null;
+      final afterPredominant = afterPeriodMoods.isNotEmpty
+          ? _getPredominantMood(afterPeriodMoods)
+          : null;
+      final ovulationPredominant = ovulationMoods.isNotEmpty
+          ? _getPredominantMood(ovulationMoods)
+          : null;
 
-      if (beforeLow > 0 && beforeLow >= duringLow) {
+      final isBeforeLow =
+          beforePredominant == 'Not great' || beforePredominant == 'Bad';
+      final isDuringLow =
+          duringPredominant == 'Not great' || duringPredominant == 'Bad';
+      final isAfterHigh =
+          afterPredominant == 'Great' || afterPredominant == 'Good';
+      final isOvulationHigh =
+          ovulationPredominant == 'Great' || ovulationPredominant == 'Good';
+      final isBeforeHigh =
+          beforePredominant == 'Great' || beforePredominant == 'Good';
+
+      if (isBeforeLow) {
         insightText = 'You tend to feel lower mood before your period.';
-      } else if (duringLow > 0) {
+      } else if (isDuringLow) {
         insightText =
             'You tend to feel lower mood during the first days of your period.';
-      } else if (afterHigh > 0) {
+      } else if (isAfterHigh) {
         insightText =
             'Your mood and energy tend to peak after your period during the follicular phase.';
+      } else if (isOvulationHigh) {
+        insightText =
+            'Your mood and energy tend to peak mid-cycle around ovulation.';
+      } else if (isBeforeHigh) {
+        insightText =
+            'Your mood tends to stay positive and resilient before your period.';
       } else {
         insightText =
             'Your mood remains mostly positive and stable across your cycle.';
@@ -339,11 +382,11 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
+                    return [1, 2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(
-                          'Last $value cycles',
+                          value == 1 ? 'Current cycle' : 'Last $value cycles',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.text,
@@ -356,7 +399,9 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Last $_selectedCycles cycles',
+                        _selectedCycles == 1
+                            ? 'Current cycle'
+                            : 'Last $_selectedCycles cycles',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.text,

@@ -18,53 +18,87 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
   int _selectedCycles = 6;
   bool _showAllSymptoms = false;
 
+  bool _isLogForCycle(DailyLog log, Cycle cycle) {
+    if (log.cycleId != null && log.cycleId == cycle.id) return true;
+    final logDate = DateTime(log.date.year, log.date.month, log.date.day);
+    final startDate = DateTime(
+      cycle.startDate.year,
+      cycle.startDate.month,
+      cycle.startDate.day,
+    );
+    if (logDate.isBefore(startDate)) return false;
+    if (cycle.endDate != null) {
+      final endDate = DateTime(
+        cycle.endDate!.year,
+        cycle.endDate!.month,
+        cycle.endDate!.day,
+      );
+      return !logDate.isAfter(endDate);
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
     final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
     final allSymptoms = ref.watch(allSymptomsStreamProvider).value ?? [];
 
-    // Filter completed cycles
-    final completedCycles = cycles
+    final activeCycles = cycles.where((c) => !c.isDeleted).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final completedCycles = activeCycles
         .where((c) =>
-            !c.isDeleted &&
             c.endDate != null &&
             c.cycleLength != null &&
             c.cycleLength! > 0)
-        .toList()
-      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+        .toList();
 
-    // Disclaimer if user selected a number of cycles not yet reached
+    final currentCycle = activeCycles.where((c) => c.endDate == null).lastOrNull ??
+        activeCycles.lastOrNull;
+
+    final List<Cycle> targetedCycles;
     final String? disclaimerText;
-    if (completedCycles.isEmpty) {
-      disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
-    } else if (completedCycles.length < _selectedCycles) {
-      disclaimerText =
-          'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
-    } else {
-      disclaimerText = null;
-    }
 
-    // Subset of completed cycles
-    final recentSubset = completedCycles.length > _selectedCycles
-        ? completedCycles.sublist(completedCycles.length - _selectedCycles)
-        : completedCycles;
+    if (_selectedCycles == 1) {
+      if (currentCycle != null) {
+        targetedCycles = [currentCycle];
+        disclaimerText = null;
+      } else {
+        targetedCycles = [];
+        disclaimerText = 'No cycle data available';
+      }
+    } else {
+      if (completedCycles.isEmpty) {
+        disclaimerText = 'Your last $_selectedCycles cycles are not yet completed';
+        targetedCycles = [];
+      } else if (completedCycles.length < _selectedCycles) {
+        disclaimerText =
+            'Your last $_selectedCycles cycles are not yet completed (showing ${completedCycles.length} completed)';
+        targetedCycles = completedCycles;
+      } else {
+        disclaimerText = null;
+        targetedCycles = completedCycles.sublist(
+            completedCycles.length - _selectedCycles);
+      }
+    }
 
     final Map<String, DailyLog> logsById = {for (final l in allLogs) l.id: l};
     final Map<String, Cycle> cyclesById = {for (final c in cycles) c.id: c};
 
     // Filter relevant symptoms:
-    // If completed cycles exist, symptoms linked to those cycles.
-    // Otherwise, all logged symptoms.
+    // If targeted cycles exist, symptoms linked to those cycles.
+    // Otherwise, empty list (user has not reached selected completed cycles yet).
     final List<DailySymptom> relevantSymptoms;
-    if (recentSubset.isNotEmpty) {
-      final cycleIds = recentSubset.map((c) => c.id).toSet();
+    if (targetedCycles.isNotEmpty) {
       relevantSymptoms = allSymptoms.where((s) {
+        if (s.isDeleted) return false;
         final log = logsById[s.dailyLogId];
-        return log != null && cycleIds.contains(log.cycleId);
+        if (log == null || log.isDeleted) return false;
+        return targetedCycles.any((c) => _isLogForCycle(log, c));
       }).toList();
     } else {
-      relevantSymptoms = allSymptoms;
+      relevantSymptoms = [];
     }
 
     // Group symptoms by name
@@ -75,47 +109,37 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
       symptomsByName.putIfAbsent(name, () => []).add(s);
     }
 
+    // Total distinct days logged in targeted cycles
+    final totalLoggedDays = targetedCycles.isNotEmpty
+        ? allLogs
+            .where((l) =>
+                !l.isDeleted &&
+                targetedCycles.any((c) => _isLogForCycle(l, c)))
+            .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+            .toSet()
+            .length
+        : 0;
+
     // Compute frequency statistics for each symptom
     final List<_SymptomFrequencyData> symptomFrequencyList = [];
     for (final entry in symptomsByName.entries) {
       final name = entry.key;
       final instances = entry.value;
 
-      final int percentage;
-      if (recentSubset.isNotEmpty) {
-        final Set<String> distinctCyclesWithSymptom = {};
-        for (final s in instances) {
-          final log = logsById[s.dailyLogId];
-          if (log != null && log.cycleId != null) {
-            distinctCyclesWithSymptom.add(log.cycleId!);
-          }
-        }
-        percentage = ((distinctCyclesWithSymptom.length / recentSubset.length) * 100)
-            .round()
-            .clamp(1, 100);
-      } else {
-        // Fallback when 0 completed cycles: percentage across distinct log days
-        final totalDays = allLogs
-            .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
-            .toSet()
-            .length;
-        final symptomDays = instances
-            .map((s) {
-              final log = logsById[s.dailyLogId];
-              return log != null
-                  ? DateTime(log.date.year, log.date.month, log.date.day)
-                  : null;
-            })
-            .whereType<DateTime>()
-            .toSet()
-            .length;
-        percentage = totalDays > 0
-            ? ((symptomDays / totalDays) * 100).round().clamp(1, 100)
-            : 100;
-      }
+      final symptomDays = instances
+          .map((s) => logsById[s.dailyLogId])
+          .whereType<DailyLog>()
+          .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+          .toSet()
+          .length;
+
+      final int percentage = totalLoggedDays > 0
+          ? ((symptomDays / totalLoggedDays) * 100).round().clamp(1, 100)
+          : 0;
 
       // Determine most common timing & phase
-      final timingInfo = _calculateTimingInfo(instances, logsById, cyclesById);
+      final timingInfo =
+          _calculateTimingInfo(instances, logsById, cyclesById, allLogs);
 
       symptomFrequencyList.add(
         _SymptomFrequencyData(
@@ -137,9 +161,12 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
       return b.instanceCount.compareTo(a.instanceCount);
     });
 
-    final visibleTimelineList = _showAllSymptoms || symptomFrequencyList.length <= 3
-        ? symptomFrequencyList
-        : symptomFrequencyList.take(3).toList();
+    // Top 6 symptoms for Most Common Symptoms and Timing Analysis
+    final topSixSymptoms = symptomFrequencyList.take(6).toList();
+
+    final visibleTimelineList = _showAllSymptoms || topSixSymptoms.length <= 3
+        ? topSixSymptoms
+        : topSixSymptoms.take(3).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -202,11 +229,11 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
                     });
                   },
                   itemBuilder: (BuildContext context) {
-                    return [2, 3, 4, 5, 6, 7, 8].map((int value) {
+                    return [1, 2, 3, 4, 5, 6, 7, 8].map((int value) {
                       return PopupMenuItem<int>(
                         value: value,
                         child: Text(
-                          'Last $value cycles',
+                          value == 1 ? 'Current cycle' : 'Last $value cycles',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.text,
@@ -219,7 +246,9 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Last $_selectedCycles cycles',
+                        _selectedCycles == 1
+                            ? 'Current cycle'
+                            : 'Last $_selectedCycles cycles',
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.text,
@@ -333,11 +362,11 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
                       ),
                     )
                   else
-                    ...List.generate(symptomFrequencyList.length, (index) {
-                      final item = symptomFrequencyList[index];
+                    ...List.generate(topSixSymptoms.length, (index) {
+                      final item = topSixSymptoms[index];
                       return Padding(
                         padding: EdgeInsets.only(
-                          bottom: index == symptomFrequencyList.length - 1 ? 0 : 16,
+                          bottom: index == topSixSymptoms.length - 1 ? 0 : 16,
                         ),
                         child: _buildCommonSymptomRow(
                           item.icon,
@@ -421,7 +450,7 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
                         ),
                       );
                     }),
-                    if (symptomFrequencyList.length > 3) ...[
+                    if (topSixSymptoms.length > 3) ...[
                       const SizedBox(height: 32),
                       SizedBox(
                         width: double.infinity,
@@ -464,19 +493,46 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
     List<DailySymptom> instances,
     Map<String, DailyLog> logsById,
     Map<String, Cycle> cyclesById,
+    List<DailyLog> allLogs,
   ) {
     int duringPeriodCount = 0;
     int beforePeriodCount = 0;
     int ovulationCount = 0;
     int follicularCount = 0;
 
+    // Set of dates where user recorded menstrual bleeding flow
+    final periodFlowDates = allLogs
+        .where((l) =>
+            !l.isDeleted &&
+            l.flowIntensity != null &&
+            l.flowIntensity!.isNotEmpty &&
+            l.flowIntensity != 'None')
+        .map((l) => DateTime(l.date.year, l.date.month, l.date.day))
+        .toSet();
+
     for (final s in instances) {
       final log = logsById[s.dailyLogId];
       if (log == null) continue;
 
-      final cycle = log.cycleId != null ? cyclesById[log.cycleId] : null;
+      final logDate = DateTime(log.date.year, log.date.month, log.date.day);
+
+      // 1. If this log or any log on this date recorded menstrual flow, it is DURING PERIOD!
+      final hasFlow = (log.flowIntensity != null &&
+              log.flowIntensity!.isNotEmpty &&
+              log.flowIntensity != 'None') ||
+          periodFlowDates.contains(logDate);
+
+      if (hasFlow) {
+        duringPeriodCount++;
+        continue;
+      }
+
+      Cycle? cycle = log.cycleId != null ? cyclesById[log.cycleId] : null;
+      cycle ??= cyclesById.values.where((c) => _isLogForCycle(log, c)).firstOrNull;
+
       if (cycle != null) {
-        final daysSinceStart = log.date.difference(cycle.startDate).inDays + 1;
+        final cycleStart = DateTime(cycle.startDate.year, cycle.startDate.month, cycle.startDate.day);
+        final daysSinceStart = logDate.difference(cycleStart).inDays + 1;
         final periodLen = cycle.periodLength ?? 5;
         final cycleLen = cycle.cycleLength ?? 28;
 
@@ -486,8 +542,10 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
           beforePeriodCount++;
         } else if (daysSinceStart >= 12 && daysSinceStart <= 16) {
           ovulationCount++;
-        } else {
+        } else if (daysSinceStart > periodLen && daysSinceStart < 12) {
           follicularCount++;
+        } else {
+          beforePeriodCount++;
         }
       } else {
         duringPeriodCount++;
@@ -495,24 +553,30 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
     }
 
     // Determine highest frequency phase
-    if (beforePeriodCount >= duringPeriodCount &&
-        beforePeriodCount >= ovulationCount &&
+    if (duringPeriodCount >= beforePeriodCount &&
+        duringPeriodCount >= ovulationCount &&
+        duringPeriodCount >= follicularCount &&
+        duringPeriodCount > 0) {
+      return _TimingInfo(
+        subtitle: 'Usually during the first 1-2 days of your period',
+        badgeText: 'During period',
+        badgeColor: AppColors.primaryPink,
+      );
+    } else if (beforePeriodCount >= ovulationCount &&
         beforePeriodCount >= follicularCount &&
         beforePeriodCount > 0) {
       return _TimingInfo(
         subtitle: 'Usually 1-4 days before your period',
         badgeText: 'Before period',
-        badgeColor: AppColors.primaryPink,
+        badgeColor: AppColors.primaryPurple,
       );
-    } else if (ovulationCount >= duringPeriodCount &&
-        ovulationCount >= follicularCount &&
-        ovulationCount > 0) {
+    } else if (ovulationCount >= follicularCount && ovulationCount > 0) {
       return _TimingInfo(
         subtitle: 'Usually mid-cycle around ovulation',
         badgeText: 'Ovulation',
         badgeColor: Colors.deepPurple,
       );
-    } else if (follicularCount > duringPeriodCount && follicularCount > 0) {
+    } else if (follicularCount > 0) {
       return _TimingInfo(
         subtitle: 'Usually after period in follicular phase',
         badgeText: 'Follicular',
@@ -522,7 +586,7 @@ class _SymptomsPatternsPageState extends ConsumerState<SymptomsPatternsPage> {
       return _TimingInfo(
         subtitle: 'Usually during the first 1-2 days of your period',
         badgeText: 'During period',
-        badgeColor: AppColors.primaryPurple,
+        badgeColor: AppColors.primaryPink,
       );
     }
   }

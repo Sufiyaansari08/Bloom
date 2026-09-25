@@ -176,7 +176,9 @@ class AboutBloomPage extends StatelessWidget {
                       context.push('/privacy_policy');
                     }),
                     const Divider(height: 1, color: AppColors.border, indent: 20, endIndent: 20),
-                    _buildListTile('Medical Disclaimer', () {}),
+                    _buildListTile('Medical Disclaimer', () {
+                      context.push('/medical_disclaimer');
+                    }),
                   ],
                 ),
               ),
@@ -237,7 +239,7 @@ class AboutBloomPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF9F9), // Very light soft background
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.primaryPink.withValues(alpha: 0.1)),
       ),

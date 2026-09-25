@@ -168,7 +168,9 @@ class AboutBloomPage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildListTile('Terms of Use', () {}),
+                    _buildListTile('Terms of Use', () {
+                      context.push('/terms_of_use');
+                    }),
                     const Divider(height: 1, color: AppColors.border, indent: 20, endIndent: 20),
                     _buildListTile('Privacy Policy', () {}),
                     const Divider(height: 1, color: AppColors.border, indent: 20, endIndent: 20),

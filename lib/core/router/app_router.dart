@@ -31,6 +31,14 @@ import '../../features/profile/presentation/pages/about_bloom_page.dart';
 import '../../features/profile/presentation/pages/terms_of_use_page.dart';
 import '../../features/profile/presentation/pages/privacy_policy_page.dart';
 import '../../features/profile/presentation/pages/medical_disclaimer_page.dart';
+import '../../features/profile/presentation/pages/help_support_page.dart';
+import '../../features/profile/presentation/pages/faq_page.dart';
+import '../../features/profile/presentation/pages/troubleshooting_page.dart';
+import '../../features/profile/presentation/pages/contact_support_page.dart';
+import '../../features/profile/presentation/pages/report_problem_page.dart';
+import '../../features/profile/presentation/pages/suggest_feature_page.dart';
+import '../../features/profile/presentation/pages/give_feedback_page.dart';
+import '../../features/profile/presentation/pages/when_to_seek_help_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
@@ -154,6 +162,38 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/medical_disclaimer',
       builder: (context, state) => const MedicalDisclaimerPage(),
+    ),
+    GoRoute(
+      path: '/help_support',
+      builder: (context, state) => const HelpSupportPage(),
+    ),
+    GoRoute(
+      path: '/faq',
+      builder: (context, state) => const FaqPage(),
+    ),
+    GoRoute(
+      path: '/troubleshooting',
+      builder: (context, state) => const TroubleshootingPage(),
+    ),
+    GoRoute(
+      path: '/contact_support',
+      builder: (context, state) => const ContactSupportPage(),
+    ),
+    GoRoute(
+      path: '/report_problem',
+      builder: (context, state) => const ReportProblemPage(),
+    ),
+    GoRoute(
+      path: '/suggest_feature',
+      builder: (context, state) => const SuggestFeaturePage(),
+    ),
+    GoRoute(
+      path: '/give_feedback',
+      builder: (context, state) => const GiveFeedbackPage(),
+    ),
+    GoRoute(
+      path: '/when_to_seek_help',
+      builder: (context, state) => const WhenToSeekHelpPage(),
     ),
     GoRoute(
       path: '/period_logging/start',

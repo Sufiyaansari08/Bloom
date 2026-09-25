@@ -111,7 +111,9 @@ class ProfilePage extends ConsumerWidget {
                     _SettingsTile(
                       icon: Icons.help_outline,
                       title: 'Help & Support',
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/help_support');
+                      },
                     ),
                     _SettingsTile(
                       icon: Icons.info_outline,

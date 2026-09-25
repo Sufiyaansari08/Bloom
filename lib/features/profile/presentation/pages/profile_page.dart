@@ -117,7 +117,9 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.info_outline,
                       title: 'About Bloom',
                       showDivider: false,
-                      onTap: () {},
+                      onTap: () {
+                        context.push('/about_bloom');
+                      },
                     ),
                   ],
                 ),

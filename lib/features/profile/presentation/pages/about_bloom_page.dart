@@ -172,7 +172,9 @@ class AboutBloomPage extends StatelessWidget {
                       context.push('/terms_of_use');
                     }),
                     const Divider(height: 1, color: AppColors.border, indent: 20, endIndent: 20),
-                    _buildListTile('Privacy Policy', () {}),
+                    _buildListTile('Privacy Policy', () {
+                      context.push('/privacy_policy');
+                    }),
                     const Divider(height: 1, color: AppColors.border, indent: 20, endIndent: 20),
                     _buildListTile('Medical Disclaimer', () {}),
                   ],

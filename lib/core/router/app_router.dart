@@ -29,6 +29,7 @@ import '../../features/profile/presentation/pages/privacy_security_page.dart';
 import '../../features/profile/presentation/pages/app_lock_choice_page.dart';
 import '../../features/profile/presentation/pages/about_bloom_page.dart';
 import '../../features/profile/presentation/pages/terms_of_use_page.dart';
+import '../../features/profile/presentation/pages/privacy_policy_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
@@ -144,6 +145,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/terms_of_use',
       builder: (context, state) => const TermsOfUsePage(),
+    ),
+    GoRoute(
+      path: '/privacy_policy',
+      builder: (context, state) => const PrivacyPolicyPage(),
     ),
     GoRoute(
       path: '/period_logging/start',

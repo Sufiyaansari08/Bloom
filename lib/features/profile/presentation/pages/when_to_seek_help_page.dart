@@ -7,7 +7,6 @@ class WhenToSeekHelpPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -50,26 +49,31 @@ class WhenToSeekHelpPage extends StatelessWidget {
                 ],
               ),
 
+
               const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                ),
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.red),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Emergency Information\n\nIf you believe you are experiencing a medical emergency, call your local emergency services (e.g., 911, 999, 112) or go to the nearest emergency room immediately.',
-                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, height: 1.5),
+              GestureDetector(
+                onTap: () => context.push('/emergency_information'),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.red),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Emergency Information\n\nIf you believe you are experiencing a medical emergency, tap here to view emergency contacts.',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, height: 1.5),
+                        ),
                       ),
-                    ),
-                  ],
+                      Icon(Icons.arrow_forward_ios, color: Colors.red, size: 16),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),

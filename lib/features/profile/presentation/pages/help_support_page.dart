@@ -65,7 +65,7 @@ class HelpSupportPage extends StatelessWidget {
                 items: [
                   _buildTileItem(Icons.info_outline, 'Medical Disclaimer', () { context.push('/medical_disclaimer'); }),
                   _buildTileItem(Icons.medical_services_outlined, 'When to seek medical help', () { context.push('/when_to_seek_help'); }),
-                  _buildTileItem(Icons.warning_amber_rounded, 'Emergency information', () { context.push('/when_to_seek_help'); }),
+                  _buildTileItem(Icons.warning_amber_rounded, 'Emergency information', () { context.push('/emergency_information'); }),
                 ],
               ),
 

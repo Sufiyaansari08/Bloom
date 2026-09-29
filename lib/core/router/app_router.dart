@@ -39,6 +39,7 @@ import '../../features/profile/presentation/pages/report_problem_page.dart';
 import '../../features/profile/presentation/pages/suggest_feature_page.dart';
 import '../../features/profile/presentation/pages/give_feedback_page.dart';
 import '../../features/profile/presentation/pages/when_to_seek_help_page.dart';
+import '../../features/profile/presentation/pages/emergency_information_page.dart';
 // Insights
 import '../../features/insights/presentation/pages/insights_page.dart';
 import '../../features/insights/presentation/pages/cycle_patterns_page.dart';
@@ -194,6 +195,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/when_to_seek_help',
       builder: (context, state) => const WhenToSeekHelpPage(),
+    ),
+    GoRoute(
+      path: '/emergency_information',
+      builder: (context, state) => const EmergencyInformationPage(),
     ),
     GoRoute(
       path: '/period_logging/start',

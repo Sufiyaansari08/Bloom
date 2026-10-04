@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_button.dart';
+import '../../../../core/services/auth_storage_service.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -86,8 +87,11 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 40),
               BloomButton(
                 text: 'Login',
-                onPressed: () {
-                  context.go('/home');
+                onPressed: () async {
+                  await AuthStorageService.instance.setLoggedIn(true);
+                  if (context.mounted) {
+                    context.go('/home');
+                  }
                 },
               ),
               const SizedBox(height: 24),

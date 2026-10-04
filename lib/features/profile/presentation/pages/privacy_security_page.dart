@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import '../providers/privacy_security_provider.dart';
 
 class PrivacySecurityPage extends ConsumerStatefulWidget {
@@ -905,6 +906,7 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                         await db.delete(db.dailyLogs).go();
                         await db.delete(db.cycles).go();
                         await db.delete(db.userProfiles).go();
+                        await AuthStorageService.instance.logout();
                         if (context.mounted) {
                           Navigator.of(ctx).pop();
                           context.go('/welcome');
@@ -1117,9 +1119,12 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        context.go('/welcome');
+                      onPressed: () async {
+                        await AuthStorageService.instance.logout();
+                        if (context.mounted) {
+                          Navigator.of(ctx).pop();
+                          context.go('/welcome');
+                        }
                       },
                       child: const Text(
                         'Sign Out All',

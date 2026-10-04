@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/auth_storage_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/database_providers.dart';
@@ -134,9 +135,11 @@ class ProfilePage extends ConsumerWidget {
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton(
-                  onPressed: () {
-                    // Navigate to welcome page
-                    context.go('/welcome');
+                  onPressed: () async {
+                    await AuthStorageService.instance.logout();
+                    if (context.mounted) {
+                      context.go('/welcome');
+                    }
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.primaryPink),

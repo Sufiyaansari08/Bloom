@@ -59,13 +59,14 @@ import '../../features/doctor_report/presentation/pages/doctor_report_result_pag
 import '../../features/reminders/presentation/pages/reminders_page.dart';
 import '../../features/reminders/presentation/pages/reminder_settings_page.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+GoRouter createAppRouter({String initialLocation = '/welcome'}) {
+  final rootNavigatorKey = GlobalKey<NavigatorState>();
+  final shellNavigatorKey = GlobalKey<NavigatorState>();
 
-final GoRouter appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/welcome',
-  routes: [
+  return GoRouter(
+    navigatorKey: rootNavigatorKey,
+    initialLocation: initialLocation,
+    routes: [
 
 
     GoRoute(
@@ -209,7 +210,7 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const PeriodLogPage(),
     ),
     ShellRoute(
-      navigatorKey: _shellNavigatorKey,
+      navigatorKey: shellNavigatorKey,
       builder: (context, state, child) {
         return AppShell(child: child);
       },
@@ -265,4 +266,8 @@ final GoRouter appRouter = GoRouter(
       ],
     ),
   ],
-);
+  );
+}
+
+GoRouter appRouter = createAppRouter(initialLocation: '/welcome');
+

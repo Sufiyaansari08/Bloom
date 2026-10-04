@@ -7,6 +7,7 @@ import '../../../../shared/widgets/bloom_checkbox_tile.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import 'package:drift/drift.dart' as drift;
 
 class GoalsPage extends ConsumerWidget {
@@ -106,6 +107,7 @@ class GoalsPage extends ConsumerWidget {
                       await cycleRepo.insertCycle(newCycle);
                     }
                   }
+                  await AuthStorageService.instance.setLoggedIn(true);
                   if (context.mounted) {
                     context.go('/home');
                   }

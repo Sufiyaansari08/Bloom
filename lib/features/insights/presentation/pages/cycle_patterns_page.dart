@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
+import '../../../../core/services/ai_insight_service.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class CyclePatternsPage extends ConsumerStatefulWidget {
   const CyclePatternsPage({super.key});
@@ -45,7 +47,6 @@ class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
     final String variationValue;
     final String consistencyText;
     final double consistencyProgress;
-    final String aboutText;
 
     if (recentSubset.isNotEmpty) {
       final lengths = recentSubset.map((c) => c.cycleLength!).toList();
@@ -69,8 +70,6 @@ class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
         variationValue = '±0';
         consistencyText = 'Building your cycle baseline.';
         consistencyProgress = 1.0;
-        aboutText =
-            'You have 1 cycle recorded ($averageCycle days). Continued tracking will uncover your personalized patterns.';
       } else {
         final mean = averageCycle.toDouble();
         final devSum = recentSubset
@@ -89,18 +88,6 @@ class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
           consistencyText = 'Your cycle length varies from month to month.';
           consistencyProgress = 0.55;
         }
-
-        final diff = longestCycle - shortestCycle;
-        if (diff == 0) {
-          aboutText =
-              'All your tracked cycles have a consistent length of $averageCycle days.';
-        } else if (diff <= 3) {
-          aboutText =
-              'Your cycle length has been stable with small variations between $shortestCycle and $longestCycle days.';
-        } else {
-          aboutText =
-              'Your cycles range between $shortestCycle and $longestCycle days (${diff} days difference).';
-        }
       }
     } else {
       // Zero completed cycles: strictly use onboarding baseline
@@ -111,9 +98,19 @@ class _CyclePatternsPageState extends ConsumerState<CyclePatternsPage> {
       variationValue = '±0';
       consistencyText = 'Tracking your first cycles with Bloom.';
       consistencyProgress = 1.0;
-      aboutText =
-          'Your baseline cycle length is currently set to $averageCycle days based on your onboarding profile.';
     }
+
+    final secState = ref.watch(privacySecurityProvider);
+    final variationInt = int.tryParse(variationValue.replaceAll('±', '')) ?? 0;
+    final aboutText = AiInsightService.instance.getCyclePatternInsight(
+      completedCyclesCount: recentSubset.length,
+      averageCycle: averageCycle,
+      shortestCycle: shortestCycle,
+      longestCycle: longestCycle,
+      variation: variationInt,
+      averagePeriod: averagePeriod,
+      isPersonalizedEnabled: secState.isPersonalizedRecommendationsEnabled,
+    );
 
     // Disclaimer if user selected a number of cycles not yet reached
     final String? disclaimerText;

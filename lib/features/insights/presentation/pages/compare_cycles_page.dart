@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/ai_insight_service.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class CompareCyclesPage extends ConsumerStatefulWidget {
   const CompareCyclesPage({super.key});
@@ -177,71 +179,24 @@ class _CompareCyclesPageState extends ConsumerState<CompareCyclesPage> {
     );
   }
 
-  String _generateDifferenceText(_CycleMetrics m1, _CycleMetrics m2, Cycle? c1, Cycle? c2) {
+  String _generateDifferenceText(_CycleMetrics m1, _CycleMetrics m2, Cycle? c1, Cycle? c2, bool isPersonalizedEnabled) {
     if (c1 == null || c2 == null) {
       return 'Track and complete your cycles to compare your symptoms, mood, and cycle lengths over time.';
     }
 
-    final differences = <String>[];
-
-    // Pain
-    if (m1.numericPain != null && m2.numericPain != null) {
-      final diff = m1.numericPain! - m2.numericPain!;
-      if (diff.abs() >= 0.4) {
-        differences.add(
-          diff < 0
-              ? 'average pain was lower (-${diff.abs().toStringAsFixed(1)})'
-              : 'average pain was higher (+${diff.toStringAsFixed(1)})',
-        );
-      }
-    }
-
-    // Sleep
-    if (m1.numericSleep != null && m2.numericSleep != null) {
-      final diff = m1.numericSleep! - m2.numericSleep!;
-      final mins = (diff.abs() * 60).round();
-      if (mins >= 15) {
-        differences.add(
-          diff > 0
-              ? 'sleep was longer (+${mins}m)'
-              : 'sleep was shorter (-${mins}m)',
-        );
-      }
-    }
-
-    // Stress
-    if (m1.numericStress != null && m2.numericStress != null) {
-      final diff = m1.numericStress! - m2.numericStress!;
-      if (diff.abs() >= 0.4) {
-        differences.add(
-          diff < 0
-              ? 'stress level was lower'
-              : 'stress level was higher',
-        );
-      }
-    }
-
-    // Cycle length
-    if (m1.numericCycleLength != null && m2.numericCycleLength != null && c1.endDate != null) {
-      final diff = m1.numericCycleLength! - m2.numericCycleLength!;
-      if (diff.abs() >= 1) {
-        differences.add(
-          diff > 0
-              ? 'cycle was ${diff.abs()} days longer'
-              : 'cycle was ${diff.abs()} days shorter',
-        );
-      }
-    }
-
-    if (differences.isNotEmpty) {
-      if (differences.length == 1) {
-        return 'Your ${differences.first} in this cycle.';
-      } else {
-        return 'Your ${differences.sublist(0, differences.length - 1).join(', ')} and ${differences.last} in this cycle.';
-      }
-    }
-
-    return 'Your cycle length, symptoms, and sleep remained consistent between these two cycles.';
+    return AiInsightService.instance.getCompareCyclesInsight(
+      cycle1Name: m1.title,
+      cycle2Name: m2.title,
+      cycle1Length: m1.numericCycleLength,
+      cycle2Length: m2.numericCycleLength,
+      cycle1Pain: m1.numericPain,
+      cycle2Pain: m2.numericPain,
+      cycle1Sleep: m1.numericSleep,
+      cycle2Sleep: m2.numericSleep,
+      cycle1Stress: m1.numericStress,
+      cycle2Stress: m2.numericStress,
+      isPersonalizedEnabled: isPersonalizedEnabled,
+    );
   }
 
   Future<void> _showSelectCyclesDialog(List<Cycle> cycles) async {
@@ -410,7 +365,15 @@ class _CompareCyclesPageState extends ConsumerState<CompareCyclesPage> {
       allSymptoms: allSymptoms,
     );
 
-    final differenceText = _generateDifferenceText(m1, m2, cycle1, cycle2);
+    final privacyState = ref.watch(privacySecurityProvider);
+    final isPersonalized = privacyState.isPersonalizedRecommendationsEnabled;
+    final differenceText = _generateDifferenceText(
+      m1,
+      m2,
+      cycle1,
+      cycle2,
+      isPersonalized,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,

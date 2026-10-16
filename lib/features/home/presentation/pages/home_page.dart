@@ -8,6 +8,9 @@ import '../widgets/body_today_card.dart';
 import '../widgets/summary_metrics_row.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../../../doctor_report/presentation/widgets/doctor_report_banner.dart';
+import '../../../../core/database/database_providers.dart';
+import '../../../../core/services/ai_insight_service.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -15,6 +18,20 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeProvider);
+    final userProfile = ref.watch(userProfileStreamProvider).value;
+    final secState = ref.watch(privacySecurityProvider);
+
+    final bodyTodayMessage = AiInsightService.instance.getBodyTodayInsight(
+      cycleDay: state.cycleDay,
+      avgCycleLength: userProfile?.avgCycleLength ?? 29,
+      avgPeriodLength: userProfile?.avgPeriodLength ?? 5,
+      isPeriodOngoing: state.isPeriodOngoing,
+      isPeriodLate: state.isPeriodLate,
+      painLevel: state.painLevel,
+      mood: state.mood != 'None' ? state.mood : null,
+      symptomsCount: state.symptomsLogged,
+      isPersonalizedEnabled: secState.isPersonalizedRecommendationsEnabled,
+    );
 
     return Scaffold(
       body: SafeArea(
@@ -56,8 +73,8 @@ class HomePage extends ConsumerWidget {
                 periodDay: state.periodDay,
               ),
               const SizedBox(height: 32),
-              const BodyTodayCard(
-                message: 'You usually feel lower energy and get headaches around this point in your cycle.',
+              BodyTodayCard(
+                message: bodyTodayMessage,
               ),
               const SizedBox(height: 24),
               SummaryMetricsRow(

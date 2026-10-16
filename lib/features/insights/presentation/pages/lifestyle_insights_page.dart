@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/ai_insight_service.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class LifestyleInsightsPage extends ConsumerStatefulWidget {
   const LifestyleInsightsPage({super.key});
@@ -599,6 +601,59 @@ class _LifestyleInsightsPageState extends ConsumerState<LifestyleInsightsPage> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 16),
+
+            // CARD 2.5: AI Lifestyle Advisory
+            () {
+              final secState = ref.watch(privacySecurityProvider);
+              final double? numericAvgSleep = sleepLogs.isNotEmpty
+                  ? sleepLogs.map((l) => l.sleepHours!).reduce((a, b) => a + b) / sleepLogs.length
+                  : null;
+              final double? numericAvgStress = stressLogs.isNotEmpty
+                  ? stressLogs.reduce((a, b) => a + b) / stressLogs.length
+                  : null;
+
+              final lifestyleAdvice = AiInsightService.instance.getLifestyleCorrelationInsight(
+                avgSleep: numericAvgSleep,
+                avgWater: waterVal != '--' ? waterVal : null,
+                avgActivity: activityVal != '--' ? activityVal : null,
+                avgStress: numericAvgStress?.round(),
+                hasCorrelations: correlationList.isNotEmpty,
+                isPersonalizedEnabled: secState.isPersonalizedRecommendationsEnabled,
+              );
+
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Lifestyle advisory',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      lifestyleAdvice,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.secondaryText,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }(),
 
             const SizedBox(height: 16),
 

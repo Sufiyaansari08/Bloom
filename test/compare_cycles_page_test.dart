@@ -187,9 +187,9 @@ void main() {
       expect(find.text('7.0 / 10'), findsOneWidget);
       expect(find.text('4.0 / 10'), findsOneWidget);
 
-      // What's different text generates dynamic differences
-      expect(find.textContaining('average pain was higher (+3.0)'), findsOneWidget);
-      expect(find.textContaining('sleep was shorter (-60m)'), findsOneWidget);
+      // What's different text generates dynamic summary
+      expect(find.textContaining('higher pain'), findsOneWidget);
+      expect(find.textContaining('shorter sleep'), findsOneWidget);
     });
 
     testWidgets('Select any cycles dialog allows choosing custom cycles to compare', (tester) async {

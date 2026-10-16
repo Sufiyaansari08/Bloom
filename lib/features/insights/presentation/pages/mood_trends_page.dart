@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/ai_insight_service.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class MoodTrendsPage extends ConsumerStatefulWidget {
   const MoodTrendsPage({super.key});
@@ -271,55 +273,38 @@ class _MoodTrendsPageState extends ConsumerState<MoodTrendsPage> {
       }
     }
 
-    // Card 3: Dynamic insight text aligned with predominant phase moods
-    final String insightText;
-    if (totalMoods == 0) {
-      insightText =
-          'Keep logging your daily mood to discover personalized emotional patterns across your cycle.';
-    } else {
-      final beforePredominant = beforePeriodMoods.isNotEmpty
-          ? _getPredominantMood(beforePeriodMoods)
-          : null;
-      final duringPredominant = duringPeriodMoods.isNotEmpty
-          ? _getPredominantMood(duringPeriodMoods)
-          : null;
-      final afterPredominant = afterPeriodMoods.isNotEmpty
-          ? _getPredominantMood(afterPeriodMoods)
-          : null;
-      final ovulationPredominant = ovulationMoods.isNotEmpty
-          ? _getPredominantMood(ovulationMoods)
-          : null;
+    // Card 3: Dynamic insight text powered by AiInsightService
+    final secState = ref.watch(privacySecurityProvider);
+    final beforePredominant = beforePeriodMoods.isNotEmpty
+        ? _getPredominantMood(beforePeriodMoods)
+        : null;
+    final duringPredominant = duringPeriodMoods.isNotEmpty
+        ? _getPredominantMood(duringPeriodMoods)
+        : null;
+    final afterPredominant = afterPeriodMoods.isNotEmpty
+        ? _getPredominantMood(afterPeriodMoods)
+        : null;
+    final ovulationPredominant = ovulationMoods.isNotEmpty
+        ? _getPredominantMood(ovulationMoods)
+        : null;
 
-      final isBeforeLow =
-          beforePredominant == 'Not great' || beforePredominant == 'Bad';
-      final isDuringLow =
-          duringPredominant == 'Not great' || duringPredominant == 'Bad';
-      final isAfterHigh =
-          afterPredominant == 'Great' || afterPredominant == 'Good';
-      final isOvulationHigh =
-          ovulationPredominant == 'Great' || ovulationPredominant == 'Good';
-      final isBeforeHigh =
-          beforePredominant == 'Great' || beforePredominant == 'Good';
+    final moodCountsMap = {
+      'Great': greatCount,
+      'Good': goodCount,
+      'Okay': okayCount,
+      'Not great': notGreatCount,
+      'Bad': badCount,
+    };
 
-      if (isBeforeLow) {
-        insightText = 'You tend to feel lower mood before your period.';
-      } else if (isDuringLow) {
-        insightText =
-            'You tend to feel lower mood during the first days of your period.';
-      } else if (isAfterHigh) {
-        insightText =
-            'Your mood and energy tend to peak after your period during the follicular phase.';
-      } else if (isOvulationHigh) {
-        insightText =
-            'Your mood and energy tend to peak mid-cycle around ovulation.';
-      } else if (isBeforeHigh) {
-        insightText =
-            'Your mood tends to stay positive and resilient before your period.';
-      } else {
-        insightText =
-            'Your mood remains mostly positive and stable across your cycle.';
-      }
-    }
+    final String insightText = AiInsightService.instance.getMoodTrendInsight(
+      totalMoods: totalMoods,
+      beforePeriodPredominant: beforePredominant,
+      duringPeriodPredominant: duringPredominant,
+      afterPeriodPredominant: afterPredominant,
+      ovulationPredominant: ovulationPredominant,
+      moodCounts: moodCountsMap,
+      isPersonalizedEnabled: secState.isPersonalizedRecommendationsEnabled,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,

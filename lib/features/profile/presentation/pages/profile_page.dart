@@ -15,12 +15,18 @@ class ProfilePage extends ConsumerWidget {
     final userName = userAsync.value?.name ?? 'Guest';
     final userEmail = userAsync.value?.email ?? 'guest@example.com';
 
-    final userAvatar = userAsync.value?.avatarPath ?? 'assets/images/Setting_avatar.png';
+    final userAvatar =
+        userAsync.value?.avatarPath ?? 'assets/images/Setting_avatar.png';
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 80), // slightly tighter padding
+          padding: const EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            80,
+          ), // slightly tighter padding
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -33,7 +39,10 @@ class ProfilePage extends ConsumerWidget {
                     height: 64,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.primaryPink, width: 2),
+                      border: Border.all(
+                        color: AppColors.primaryPink,
+                        width: 2,
+                      ),
                       image: DecorationImage(
                         image: AssetImage(userAvatar),
                         fit: BoxFit.cover,
@@ -47,9 +56,9 @@ class ProfilePage extends ConsumerWidget {
                       Text(
                         userName,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -103,12 +112,7 @@ class ProfilePage extends ConsumerWidget {
                         context.push('/reminder_settings');
                       },
                     ),
-                    _SettingsTile(
-                      icon: Icons.language,
-                      title: 'Language',
-                      trailingText: 'English',
-                      onTap: () {},
-                    ),
+
                     _SettingsTile(
                       icon: Icons.help_outline,
                       title: 'Help & Support',
@@ -127,9 +131,7 @@ class ProfilePage extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              const Spacer(),
-
+              const SizedBox(height: 40),
               // 3. Log out button
               SizedBox(
                 width: double.infinity,
@@ -212,7 +214,11 @@ class _SettingsTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                const Icon(Icons.chevron_right, color: AppColors.border, size: 20),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.border,
+                  size: 20,
+                ),
               ],
             ),
           ),

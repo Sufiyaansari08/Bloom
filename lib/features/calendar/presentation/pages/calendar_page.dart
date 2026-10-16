@@ -286,15 +286,33 @@ class CalendarPage extends ConsumerWidget {
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              child: Text(
-                                state.isPeriodLate
-                                    ? 'Period is ${state.daysLate} ${state.daysLate == 1 ? "day" : "days"} late (expected ${state.nextPeriodStartDate!.day} ${_getMonthName(state.nextPeriodStartDate!.month)})'
-                                    : 'Period expected ${state.nextPeriodStartDate!.day}-${(state.nextPeriodEndDate ?? state.nextPeriodStartDate!.add(const Duration(days: 4))).day} ${_getMonthName(state.nextPeriodStartDate!.month)}',
-                                style: const TextStyle(
-                                  color: AppColors.text,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
+                              child: Builder(
+                                builder: (context) {
+                                  if (state.isPeriodLate) {
+                                    return Text(
+                                      'Period is ${state.daysLate} ${state.daysLate == 1 ? "day" : "days"} late (expected ${state.nextPeriodStartDate!.day} ${_getMonthName(state.nextPeriodStartDate!.month)})',
+                                      style: const TextStyle(
+                                        color: AppColors.text,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    );
+                                  }
+                                  final pStart = state.nextPeriodStartDate!;
+                                  final pEnd = state.nextPeriodEndDate ??
+                                      state.nextPeriodStartDate!.add(const Duration(days: 4));
+                                  final label = pStart.month == pEnd.month
+                                      ? 'Period expected ${pStart.day}-${pEnd.day} ${_getMonthName(pStart.month)}'
+                                      : 'Period expected ${pStart.day} ${_getMonthName(pStart.month)} - ${pEnd.day} ${_getMonthName(pEnd.month)}';
+                                  return Text(
+                                    label,
+                                    style: const TextStyle(
+                                      color: AppColors.text,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],

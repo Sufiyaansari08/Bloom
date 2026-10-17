@@ -1,0 +1,14 @@
+{
+  "16": "privacySecurityProvider",
+  "29": "name_page.dart",
+  "30": "app_settings_page.dart",
+  "31": "period_log_page.dart",
+  "47": "List",
+  "54": "signup_page.dart",
+  "62": "about_bloom_page.dart",
+  "68": "emergency_information_page.dart",
+  "74": "_PatternPainter",
+  "75": "PeriodFlowPainBottomSheetContent",
+  "79": "VoidCallback",
+  "96": "package:bloom/core/database/app_database.dart"
+}

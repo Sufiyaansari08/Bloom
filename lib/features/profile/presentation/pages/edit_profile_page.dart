@@ -16,21 +16,14 @@ class EditProfilePage extends ConsumerStatefulWidget {
 
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  
+
   DateTime? _selectedDob;
   String _currentAvatar = 'assets/images/Setting_avatar.png';
   bool _initialized = false;
-
-  final List<String> _availableAvatars = const [
-    'assets/images/Setting_avatar.png',
-    'assets/images/body_avatar.png',
-    'assets/images/doctor_avatar.jpg',
-    'assets/images/low_mood_avatar.jpg',
-  ];
 
   @override
   void initState() {
@@ -73,14 +66,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       ),
       body: userAsync.when(
         data: (user) {
-          if (user == null) return const Center(child: Text('Profile not found'));
-          
+          if (user == null)
+            return const Center(child: Text('Profile not found'));
+
           if (!_initialized) {
             _nameController.text = user.name;
             _emailController.text = user.email ?? '';
             _phoneController.text = user.phone ?? '';
             _selectedDob = user.dateOfBirth;
-            _currentAvatar = user.avatarPath ?? 'assets/images/Setting_avatar.png';
+            _currentAvatar =
+                user.avatarPath ?? 'assets/images/Setting_avatar.png';
             _initialized = true;
           }
 
@@ -96,50 +91,33 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     Center(
                       child: Column(
                         children: [
-                          Stack(
-                            children: [
-                              Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.primaryPink, width: 2),
-                                  image: DecorationImage(
-                                    image: AssetImage(_currentAvatar),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primaryPink,
+                                width: 2,
                               ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: () => _showAvatarPicker(context),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.primaryPink,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.camera_alt,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
+                              image: DecorationImage(
+                                image: AssetImage(_currentAvatar),
+                                fit: BoxFit.cover,
                               ),
-                            ],
+                            ),
                           ),
                           const SizedBox(height: 8),
                           const Text(
                             'Profile Photo',
-                            style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                            style: TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 0),
 
                     // Name
                     _buildTextField(
@@ -147,15 +125,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       label: 'Name',
                       hint: 'Enter your name',
                       validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Name cannot be empty';
+                        if (val == null || val.trim().isEmpty)
+                          return 'Name cannot be empty';
                         return null;
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
 
                     // Date of Birth
                     _buildDobPicker(context),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
 
                     // Email
                     _buildTextField(
@@ -164,7 +143,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       hint: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
 
                     // Phone
                     _buildTextField(
@@ -173,7 +152,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       hint: 'Enter your phone number',
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
 
                     // Change Password
                     SizedBox(
@@ -188,7 +167,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Change password coming soon!')),
+                            const SnackBar(
+                              content: Text('Change password coming soon!'),
+                            ),
                           );
                         },
                         child: const Text(
@@ -201,7 +182,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 16),
 
                     // Save Changes
                     BloomButton(
@@ -209,10 +190,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           final userRepo = ref.read(userRepositoryProvider);
-                          final updatedUser = user.toCompanion(true).copyWith(
+                          final updatedUser = user
+                              .toCompanion(true)
+                              .copyWith(
                                 name: drift.Value(_nameController.text.trim()),
-                                email: drift.Value(_emailController.text.trim().isEmpty ? null : _emailController.text.trim()),
-                                phone: drift.Value(_phoneController.text.trim().isEmpty ? null : _phoneController.text.trim()),
+                                email: drift.Value(
+                                  _emailController.text.trim().isEmpty
+                                      ? null
+                                      : _emailController.text.trim(),
+                                ),
+                                phone: drift.Value(
+                                  _phoneController.text.trim().isEmpty
+                                      ? null
+                                      : _phoneController.text.trim(),
+                                ),
                                 dateOfBirth: drift.Value(_selectedDob),
                                 avatarPath: drift.Value(_currentAvatar),
                               );
@@ -265,8 +256,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             hintText: hint,
             filled: true,
             fillColor: Colors.white,
-            suffixIcon: const Icon(Icons.edit, color: AppColors.secondaryText, size: 20),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            suffixIcon: const Icon(
+              Icons.edit,
+              color: AppColors.secondaryText,
+              size: 20,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: const BorderSide(color: AppColors.border),
@@ -277,7 +275,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primaryPink, width: 2),
+              borderSide: const BorderSide(
+                color: AppColors.primaryPink,
+                width: 2,
+              ),
             ),
           ),
         ),
@@ -302,7 +303,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           onTap: () async {
             final date = await showDatePicker(
               context: context,
-              initialDate: _selectedDob ?? DateTime.now().subtract(const Duration(days: 365 * 20)),
+              initialDate:
+                  _selectedDob ??
+                  DateTime.now().subtract(const Duration(days: 365 * 20)),
               firstDate: DateTime(1900),
               lastDate: DateTime.now(),
               builder: (context, child) {
@@ -345,77 +348,26 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _selectedDob != null ? DateFormat('MMMM d, yyyy').format(_selectedDob!) : 'Select your date of birth',
+                  _selectedDob != null
+                      ? DateFormat('MMMM d, yyyy').format(_selectedDob!)
+                      : 'Select your date of birth',
                   style: TextStyle(
-                    color: _selectedDob != null ? AppColors.text : AppColors.secondaryText,
+                    color: _selectedDob != null
+                        ? AppColors.text
+                        : AppColors.secondaryText,
                     fontSize: 16,
                   ),
                 ),
-                const Icon(Icons.edit, color: AppColors.secondaryText, size: 20),
+                const Icon(
+                  Icons.edit,
+                  color: AppColors.secondaryText,
+                  size: 20,
+                ),
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-
-  void _showAvatarPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (BuildContext bottomSheetContext) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Choose Profile Avatar',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.text),
-              ),
-              const SizedBox(height: 16),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: _availableAvatars.length,
-                itemBuilder: (context, index) {
-                  final avatarPath = _availableAvatars[index];
-                  final isSelected = avatarPath == _currentAvatar;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _currentAvatar = avatarPath;
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: isSelected ? Border.all(color: AppColors.primaryPink, width: 3) : null,
-                        image: DecorationImage(
-                          image: AssetImage(avatarPath),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
     );
   }
 }

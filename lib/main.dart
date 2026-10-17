@@ -24,8 +24,8 @@ void main() async {
   await DatabaseSeeder.purgeMockCycles(db);
 
   final isLoggedIn = await AuthStorageService.instance.isLoggedIn(db: db);
-  final initialRoute = isLoggedIn ? '/home' : '/welcome';
-  appRouter = createAppRouter(initialLocation: initialRoute);
+  final targetRoute = isLoggedIn ? '/home' : '/welcome';
+  appRouter = createAppRouter(initialLocation: '/splash?target=$targetRoute');
 
   try {
     await NotificationService.instance.initialize();

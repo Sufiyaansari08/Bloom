@@ -120,9 +120,9 @@
     "semantic_hash": "576be942c60c528e092b32bc93371187"
   },
   "lib/core/router/app_router.dart": {
-    "mtime": 1792234130.8087595,
-    "seen": 1792234602.8565338,
-    "ast_hash": "997bf85fa411fb206ec5cb3463f7cd86",
+    "mtime": 1792253181.7184203,
+    "seen": 1792253432.6927936,
+    "ast_hash": "dfbda104f8a80293bafaf5f7125dad6d",
     "semantic_hash": ""
   },
   "lib/core/services/ai_insight_service.dart": {
@@ -636,10 +636,10 @@
     "semantic_hash": "140e9f0e4351f4fe95662a90004225f0"
   },
   "lib/main.dart": {
-    "mtime": 1792174673.9267397,
-    "seen": 1792176800.1949797,
-    "ast_hash": "8cd5a7d68659f5753942779753f55969",
-    "semantic_hash": "8cd5a7d68659f5753942779753f55969"
+    "mtime": 1792253195.7687044,
+    "seen": 1792253432.7012274,
+    "ast_hash": "5c8ac64698ff9930a7cc4f71fad291ac",
+    "semantic_hash": ""
   },
   "lib/shared/widgets/bloom_app_bar.dart": {
     "mtime": 1790700852.5900512,
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "lib/features/doctor_report/presentation/widgets/doctor_report_ai_observation_card.dart": {
-    "mtime": 1792251998.9299839,
-    "seen": 1792252085.938749,
-    "ast_hash": "db8123d7db7f0849f322ef948e34a1e3",
+    "mtime": 1792252501.3152125,
+    "seen": 1792252564.1452193,
+    "ast_hash": "62b4362a9a9a4503e1e8f5fc06dc620b",
     "semantic_hash": ""
   },
   "lib/features/doctor_report/services/doctor_report_ai_service.dart": {
@@ -1128,9 +1128,21 @@
     "semantic_hash": ""
   },
   "test/doctor_report_ai_test.dart": {
-    "mtime": 1792252035.6997209,
-    "seen": 1792252085.943733,
-    "ast_hash": "3e5c452b504ab125122fd2239580fba5",
+    "mtime": 1792252292.7564056,
+    "seen": 1792252332.6017513,
+    "ast_hash": "174779f935337538e576a54b76e907c3",
+    "semantic_hash": ""
+  },
+  "lib/features/welcome/presentation/pages/splash_page.dart": {
+    "mtime": 1792254646.1932473,
+    "seen": 1792254698.5763662,
+    "ast_hash": "72d95c777435a41c821e3ce630d163a8",
+    "semantic_hash": ""
+  },
+  "test/splash_page_test.dart": {
+    "mtime": 1792254652.654986,
+    "seen": 1792254698.5763662,
+    "ast_hash": "a491bf865f62058d5aab1fe2bd3c9821",
     "semantic_hash": ""
   }
 }

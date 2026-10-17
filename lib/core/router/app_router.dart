@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 // Onboarding
 import '../../features/welcome/presentation/pages/welcome_page.dart';
+import '../../features/welcome/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/onboarding/presentation/pages/name_page.dart';
@@ -60,7 +61,7 @@ import '../../features/doctor_report/presentation/pages/doctor_report_result_pag
 import '../../features/reminders/presentation/pages/reminders_page.dart';
 import '../../features/reminders/presentation/pages/reminder_settings_page.dart';
 
-GoRouter createAppRouter({String initialLocation = '/welcome'}) {
+GoRouter createAppRouter({String initialLocation = '/splash'}) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   final shellNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -69,7 +70,13 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
     initialLocation: initialLocation,
     routes: [
 
-
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) {
+        final target = state.uri.queryParameters['target'];
+        return SplashPage(targetRoute: target);
+      },
+    ),
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomePage(),
@@ -277,5 +284,5 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
   );
 }
 
-GoRouter appRouter = createAppRouter(initialLocation: '/welcome');
+GoRouter appRouter = createAppRouter(initialLocation: '/splash');
 

@@ -498,9 +498,9 @@
     "semantic_hash": "2e1df94630f20ef066d414c63d22d3fb"
   },
   "lib/features/profile/presentation/pages/edit_profile_page.dart": {
-    "mtime": 1792177357.434552,
-    "seen": 1792233614.7944806,
-    "ast_hash": "8e1b6982091a8f2e9acc211268ed7811",
+    "mtime": 1792236500.0507107,
+    "seen": 1792236612.4126668,
+    "ast_hash": "37fdb435c268610f7274abff1f32f705",
     "semantic_hash": ""
   },
   "lib/features/profile/presentation/pages/emergency_information_page.dart": {
@@ -546,9 +546,9 @@
     "semantic_hash": "58732e78a5d6840d1b1e7957b61f14dd"
   },
   "lib/features/profile/presentation/pages/profile_page.dart": {
-    "mtime": 1792232310.185563,
-    "seen": 1792233614.7954814,
-    "ast_hash": "2b7bf1cb44189bfc8bd43dd2e5a7326c",
+    "mtime": 1792236817.2196126,
+    "seen": 1792236899.3633068,
+    "ast_hash": "1ce09d236bcd829024ace7e6a54132bb",
     "semantic_hash": ""
   },
   "lib/features/profile/presentation/pages/report_problem_page.dart": {
@@ -1107,6 +1107,12 @@
     "mtime": 1792235655.5934954,
     "seen": 1792235696.6201572,
     "ast_hash": "f7b084582f483cd5213701b451e3768c",
+    "semantic_hash": ""
+  },
+  "test/profile_edit_test.dart": {
+    "mtime": 1792237311.0925312,
+    "seen": 1792237431.6210032,
+    "ast_hash": "3e5bb226558e2cb3efd9586c606fa37f",
     "semantic_hash": ""
   }
 }

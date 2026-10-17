@@ -26,7 +26,7 @@ class ProfilePage extends ConsumerWidget {
             24,
             24,
             80,
-          ), // slightly tighter padding
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -112,7 +112,6 @@ class ProfilePage extends ConsumerWidget {
                         context.push('/reminder_settings');
                       },
                     ),
-
                     _SettingsTile(
                       icon: Icons.help_outline,
                       title: 'Help & Support',
@@ -170,14 +169,12 @@ class ProfilePage extends ConsumerWidget {
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String? trailingText;
   final VoidCallback onTap;
   final bool showDivider;
 
   const _SettingsTile({
     required this.icon,
     required this.title,
-    this.trailingText,
     required this.onTap,
     this.showDivider = true,
   });
@@ -204,16 +201,6 @@ class _SettingsTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (trailingText != null) ...[
-                  Text(
-                    trailingText!,
-                    style: const TextStyle(
-                      color: AppColors.secondaryText,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
                 const Icon(
                   Icons.chevron_right,
                   color: AppColors.border,

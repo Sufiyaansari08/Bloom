@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../shared/widgets/bloom_button.dart';
+import '../../../../shared/widgets/bloom_lifestyle_card.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -20,10 +21,25 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
+  late TextEditingController _heightController;
+  late TextEditingController _weightController;
 
   DateTime? _selectedDob;
+  String _selectedBloodGroup = "Don't know";
   String _currentAvatar = 'assets/images/Setting_avatar.png';
   bool _initialized = false;
+
+  static const List<String> bloodGroups = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+    "Don't know",
+  ];
 
   @override
   void initState() {
@@ -31,6 +47,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _nameController = TextEditingController();
     _emailController = TextEditingController();
     _phoneController = TextEditingController();
+    _heightController = TextEditingController();
+    _weightController = TextEditingController();
   }
 
   @override
@@ -38,6 +56,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -66,14 +86,24 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       ),
       body: userAsync.when(
         data: (user) {
-          if (user == null)
+          if (user == null) {
             return const Center(child: Text('Profile not found'));
+          }
 
           if (!_initialized) {
             _nameController.text = user.name;
             _emailController.text = user.email ?? '';
             _phoneController.text = user.phone ?? '';
             _selectedDob = user.dateOfBirth;
+            if (user.heightCm != null && user.heightCm! > 0) {
+              _heightController.text = user.heightCm!.toInt().toString();
+            }
+            if (user.weightKg != null && user.weightKg! > 0) {
+              _weightController.text = user.weightKg!.toInt().toString();
+            }
+            if (user.bloodGroup != null && bloodGroups.contains(user.bloodGroup)) {
+              _selectedBloodGroup = user.bloodGroup!;
+            }
             _currentAvatar =
                 user.avatarPath ?? 'assets/images/Setting_avatar.png';
             _initialized = true;
@@ -117,7 +147,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 0),
+                    const SizedBox(height: 16),
 
                     // Name
                     _buildTextField(
@@ -125,15 +155,99 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       label: 'Name',
                       hint: 'Enter your name',
                       validator: (val) {
-                        if (val == null || val.trim().isEmpty)
+                        if (val == null || val.trim().isEmpty) {
                           return 'Name cannot be empty';
+                        }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
 
                     // Date of Birth
                     _buildDobPicker(context),
+                    const SizedBox(height: 16),
+
+                    // Height and Weight Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _heightController,
+                            label: 'Height',
+                            hint: 'e.g. 165',
+                            suffixText: 'cm',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _weightController,
+                            label: 'Weight',
+                            hint: 'e.g. 60',
+                            suffixText: 'kg',
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Blood Group Dropdown Card (Daily Checkin Style)
+                    BloomLifestyleCard(
+                      title: 'Blood Group',
+                      icon: Icons.bloodtype,
+                      iconColor: AppColors.primaryPink,
+                      trailing: PopupMenuButton<String>(
+                        initialValue: _selectedBloodGroup,
+                        position: PopupMenuPosition.under,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        color: Colors.white,
+                        elevation: 4,
+                        constraints: const BoxConstraints(maxHeight: 260),
+                        onSelected: (val) {
+                          setState(() {
+                            _selectedBloodGroup = val;
+                          });
+                        },
+                        itemBuilder: (context) => bloodGroups
+                            .map((e) => PopupMenuItem<String>(
+                                  value: e,
+                                  child: Text(
+                                    e,
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: e == "Don't know"
+                                              ? AppColors.secondaryText
+                                              : AppColors.text,
+                                        ),
+                                  ),
+                                ))
+                            .toList(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _selectedBloodGroup,
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: _selectedBloodGroup == "Don't know"
+                                        ? AppColors.secondaryText
+                                        : AppColors.text,
+                                  ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.keyboard_arrow_down,
+                              color: AppColors.secondaryText,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 8),
 
                     // Email
@@ -143,7 +257,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       hint: 'Enter your email',
                       keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
 
                     // Phone
                     _buildTextField(
@@ -182,7 +296,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // Save Changes
                     BloomButton(
@@ -190,6 +304,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           final userRepo = ref.read(userRepositoryProvider);
+                          final height = double.tryParse(_heightController.text.trim());
+                          final weight = double.tryParse(_weightController.text.trim());
+
                           final updatedUser = user
                               .toCompanion(true)
                               .copyWith(
@@ -205,6 +322,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                       : _phoneController.text.trim(),
                                 ),
                                 dateOfBirth: drift.Value(_selectedDob),
+                                heightCm: drift.Value(height),
+                                weightKg: drift.Value(weight),
+                                bloodGroup: drift.Value(_selectedBloodGroup),
                                 avatarPath: drift.Value(_currentAvatar),
                               );
                           await userRepo.saveUserProfile(updatedUser);
@@ -233,6 +353,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     required TextEditingController controller,
     required String label,
     required String hint,
+    String? suffixText,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
@@ -256,11 +377,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             hintText: hint,
             filled: true,
             fillColor: Colors.white,
-            suffixIcon: const Icon(
-              Icons.edit,
-              color: AppColors.secondaryText,
-              size: 20,
+            suffixText: suffixText,
+            suffixStyle: const TextStyle(
+              color: AppColors.primaryPurple,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
             ),
+            suffixIcon: suffixText == null
+                ? const Icon(
+                    Icons.edit,
+                    color: AppColors.secondaryText,
+                    size: 20,
+                  )
+                : null,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,

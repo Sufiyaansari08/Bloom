@@ -636,9 +636,9 @@
     "semantic_hash": "140e9f0e4351f4fe95662a90004225f0"
   },
   "lib/main.dart": {
-    "mtime": 1792253195.7687044,
-    "seen": 1792253432.7012274,
-    "ast_hash": "5c8ac64698ff9930a7cc4f71fad291ac",
+    "mtime": 1792256172.319108,
+    "seen": 1792256252.3015063,
+    "ast_hash": "ba7726833d84bb4d5ec5d55da5bc8c9e",
     "semantic_hash": ""
   },
   "lib/shared/widgets/bloom_app_bar.dart": {
@@ -1062,26 +1062,26 @@
     "semantic_hash": ""
   },
   "test/failures/app_logo_isolatedDiff.png": {
-    "mtime": 1792251111.245754,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.192562,
+    "seen": 1792256252.3052788,
     "ast_hash": "bbc1f4f1b7776bf6d321227da88cee88",
     "semantic_hash": ""
   },
   "test/failures/app_logo_maskedDiff.png": {
-    "mtime": 1792251111.2272015,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.1705678,
+    "seen": 1792256252.3052788,
     "ast_hash": "49701476c58c984d01e10b68b0a417e4",
     "semantic_hash": ""
   },
   "test/failures/app_logo_masterImage.png": {
-    "mtime": 1792251111.1991334,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.1375706,
+    "seen": 1792256252.3052788,
     "ast_hash": "56532e3d234b605365067edb0e572263",
     "semantic_hash": ""
   },
   "test/failures/app_logo_testImage.png": {
-    "mtime": 1792251111.2104793,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.153569,
+    "seen": 1792256252.3052788,
     "ast_hash": "0e54e47a1e65eade15a9a4502b657fdd",
     "semantic_hash": ""
   },
@@ -1134,9 +1134,9 @@
     "semantic_hash": ""
   },
   "lib/features/welcome/presentation/pages/splash_page.dart": {
-    "mtime": 1792254906.1816027,
-    "seen": 1792254942.4847617,
-    "ast_hash": "4465e090a549849feed805c1ea0f462b",
+    "mtime": 1792256157.4732485,
+    "seen": 1792256252.2998803,
+    "ast_hash": "68ae942ec3c455b430c765bb703be528",
     "semantic_hash": ""
   },
   "test/splash_page_test.dart": {

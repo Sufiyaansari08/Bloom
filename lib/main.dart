@@ -27,28 +27,6 @@ void main() async {
   final targetRoute = isLoggedIn ? '/home' : '/welcome';
   appRouter = createAppRouter(initialLocation: '/splash?target=$targetRoute');
 
-  try {
-    await NotificationService.instance.initialize();
-    await NotificationService.instance.requestPermissions();
-    NotificationService.instance.onNotificationTapped = (payload) {
-      final route =
-          (payload != null && payload.isNotEmpty) ? payload : '/reminders';
-      appRouter.push(route);
-    };
-
-    final launchPayload =
-        await NotificationService.instance.getAppLaunchPayload();
-    if (launchPayload != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        appRouter.push(
-          launchPayload.isNotEmpty ? launchPayload : '/reminders',
-        );
-      });
-    }
-  } catch (e) {
-    debugPrint('NotificationService init error in main: $e');
-  }
-
   runApp(
     ProviderScope(
       overrides: [
@@ -60,6 +38,30 @@ void main() async {
       child: const BloomApp(),
     ),
   );
+
+  _initNotifications();
+}
+
+void _initNotifications() async {
+  try {
+    await NotificationService.instance.initialize();
+    await NotificationService.instance.requestPermissions();
+    NotificationService.instance.onNotificationTapped = (payload) {
+      final route =
+          (payload != null && payload.isNotEmpty) ? payload : '/reminders';
+      appRouter.push(route);
+    };
+
+    final launchPayload =
+        await NotificationService.instance.getAppLaunchPayload();
+    if (launchPayload != null && launchPayload.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        appRouter.push(launchPayload);
+      });
+    }
+  } catch (e) {
+    debugPrint('NotificationService init error in background: $e');
+  }
 }
 
 class BloomApp extends ConsumerWidget {

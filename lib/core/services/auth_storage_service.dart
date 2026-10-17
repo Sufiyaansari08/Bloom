@@ -9,6 +9,7 @@ class AuthStorageService {
   static final AuthStorageService instance = AuthStorageService._();
 
   static const String _fileName = 'auth_state.json';
+  bool? _cachedIsLoggedIn;
 
   Future<File> _getFile() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -19,13 +20,19 @@ class AuthStorageService {
   /// If no auth file exists yet, checks the database to see if the user has already
   /// completed onboarding or has existing cycle data.
   Future<bool> isLoggedIn({AppDatabase? db}) async {
+    if (_cachedIsLoggedIn != null) {
+      return _cachedIsLoggedIn!;
+    }
+
     try {
       final file = await _getFile();
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isNotEmpty) {
           final Map<String, dynamic> data = jsonDecode(content);
-          return data['isLoggedIn'] == true;
+          final loggedIn = data['isLoggedIn'] == true;
+          _cachedIsLoggedIn = loggedIn;
+          return loggedIn;
         }
       }
 
@@ -51,6 +58,7 @@ class AuthStorageService {
 
   /// Persists login status to disk.
   Future<void> setLoggedIn(bool value) async {
+    _cachedIsLoggedIn = value;
     try {
       final file = await _getFile();
       final data = {'isLoggedIn': value};
@@ -62,6 +70,7 @@ class AuthStorageService {
 
   /// Logs the user out.
   Future<void> logout() async {
+    _cachedIsLoggedIn = false;
     await setLoggedIn(false);
   }
 }

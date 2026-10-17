@@ -132,10 +132,10 @@
     "semantic_hash": "17c26f89126e505d290d73a7525ea51d"
   },
   "lib/core/services/auth_storage_service.dart": {
-    "mtime": 1791127728.5737722,
-    "seen": 1792166121.8183482,
-    "ast_hash": "84464a8f8c796eb687d8042a0100aead",
-    "semantic_hash": "84464a8f8c796eb687d8042a0100aead"
+    "mtime": 1792256902.1231947,
+    "seen": 1792257106.684335,
+    "ast_hash": "e3373c216789a1db7586c9337dc5267e",
+    "semantic_hash": ""
   },
   "lib/core/services/notification_service.dart": {
     "mtime": 1790700852.5688362,
@@ -636,9 +636,9 @@
     "semantic_hash": "140e9f0e4351f4fe95662a90004225f0"
   },
   "lib/main.dart": {
-    "mtime": 1792253195.7687044,
-    "seen": 1792253432.7012274,
-    "ast_hash": "5c8ac64698ff9930a7cc4f71fad291ac",
+    "mtime": 1792257032.1026795,
+    "seen": 1792257106.700185,
+    "ast_hash": "accd0fc37c537db4d28aa7ee15e2a933",
     "semantic_hash": ""
   },
   "lib/shared/widgets/bloom_app_bar.dart": {
@@ -1062,26 +1062,26 @@
     "semantic_hash": ""
   },
   "test/failures/app_logo_isolatedDiff.png": {
-    "mtime": 1792251111.245754,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.192562,
+    "seen": 1792256252.3052788,
     "ast_hash": "bbc1f4f1b7776bf6d321227da88cee88",
     "semantic_hash": ""
   },
   "test/failures/app_logo_maskedDiff.png": {
-    "mtime": 1792251111.2272015,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.1705678,
+    "seen": 1792256252.3052788,
     "ast_hash": "49701476c58c984d01e10b68b0a417e4",
     "semantic_hash": ""
   },
   "test/failures/app_logo_masterImage.png": {
-    "mtime": 1792251111.1991334,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.1375706,
+    "seen": 1792256252.3052788,
     "ast_hash": "56532e3d234b605365067edb0e572263",
     "semantic_hash": ""
   },
   "test/failures/app_logo_testImage.png": {
-    "mtime": 1792251111.2104793,
-    "seen": 1792251581.7417552,
+    "mtime": 1792256226.153569,
+    "seen": 1792256252.3052788,
     "ast_hash": "0e54e47a1e65eade15a9a4502b657fdd",
     "semantic_hash": ""
   },
@@ -1134,8 +1134,8 @@
     "semantic_hash": ""
   },
   "lib/features/welcome/presentation/pages/splash_page.dart": {
-    "mtime": 1792255380.0408914,
-    "seen": 1792255461.2541928,
+    "mtime": 1792256966.4180882,
+    "seen": 1792257106.684335,
     "ast_hash": "614f307a8382a0504a6d5f82913f2d6b",
     "semantic_hash": ""
   },

@@ -110,6 +110,104 @@ class DoctorReportData {
     required this.stressFormatted,
     required this.observationsSummary,
   });
+
+  DoctorReportData copyWith({
+    String? userName,
+    String? userAge,
+    String? userDob,
+    String? userHeight,
+    String? userWeight,
+    String? userBloodGroup,
+    String? dateRangeText,
+    int? cycleCount,
+    int? avgCycleLength,
+    int? avgPeriodLength,
+    int? shortestCycle,
+    int? longestCycle,
+    String? cycleRange,
+    int? cycleVariationDays,
+    String? variationText,
+    List<CycleChartPoint>? cycleBarPoints,
+    int? shortestPeriod,
+    int? longestPeriod,
+    List<CycleChartPoint>? periodBarPoints,
+    double? avgPainLevel,
+    String? painLabel,
+    String? painLevelText,
+    List<ReportSymptomPattern>? symptomPatterns,
+    List<ReportMoodTrend>? moodTrends,
+    String? sleepFormatted,
+    String? waterFormatted,
+    String? activityFormatted,
+    String? stressFormatted,
+    String? observationsSummary,
+  }) {
+    return DoctorReportData(
+      userName: userName ?? this.userName,
+      userAge: userAge ?? this.userAge,
+      userDob: userDob ?? this.userDob,
+      userHeight: userHeight ?? this.userHeight,
+      userWeight: userWeight ?? this.userWeight,
+      userBloodGroup: userBloodGroup ?? this.userBloodGroup,
+      dateRangeText: dateRangeText ?? this.dateRangeText,
+      cycleCount: cycleCount ?? this.cycleCount,
+      avgCycleLength: avgCycleLength ?? this.avgCycleLength,
+      avgPeriodLength: avgPeriodLength ?? this.avgPeriodLength,
+      shortestCycle: shortestCycle ?? this.shortestCycle,
+      longestCycle: longestCycle ?? this.longestCycle,
+      cycleRange: cycleRange ?? this.cycleRange,
+      cycleVariationDays: cycleVariationDays ?? this.cycleVariationDays,
+      variationText: variationText ?? this.variationText,
+      cycleBarPoints: cycleBarPoints ?? this.cycleBarPoints,
+      shortestPeriod: shortestPeriod ?? this.shortestPeriod,
+      longestPeriod: longestPeriod ?? this.longestPeriod,
+      periodBarPoints: periodBarPoints ?? this.periodBarPoints,
+      avgPainLevel: avgPainLevel ?? this.avgPainLevel,
+      painLabel: painLabel ?? this.painLabel,
+      painLevelText: painLevelText ?? this.painLevelText,
+      symptomPatterns: symptomPatterns ?? this.symptomPatterns,
+      moodTrends: moodTrends ?? this.moodTrends,
+      sleepFormatted: sleepFormatted ?? this.sleepFormatted,
+      waterFormatted: waterFormatted ?? this.waterFormatted,
+      activityFormatted: activityFormatted ?? this.activityFormatted,
+      stressFormatted: stressFormatted ?? this.stressFormatted,
+      observationsSummary: observationsSummary ?? this.observationsSummary,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DoctorReportData &&
+          runtimeType == other.runtimeType &&
+          userName == other.userName &&
+          dateRangeText == other.dateRangeText &&
+          cycleCount == other.cycleCount &&
+          avgCycleLength == other.avgCycleLength &&
+          avgPeriodLength == other.avgPeriodLength &&
+          shortestCycle == other.shortestCycle &&
+          longestCycle == other.longestCycle &&
+          cycleVariationDays == other.cycleVariationDays &&
+          avgPainLevel == other.avgPainLevel &&
+          sleepFormatted == other.sleepFormatted &&
+          stressFormatted == other.stressFormatted &&
+          observationsSummary == other.observationsSummary;
+
+  @override
+  int get hashCode => Object.hash(
+        userName,
+        dateRangeText,
+        cycleCount,
+        avgCycleLength,
+        avgPeriodLength,
+        shortestCycle,
+        longestCycle,
+        cycleVariationDays,
+        avgPainLevel,
+        sleepFormatted,
+        stressFormatted,
+        observationsSummary,
+      );
 }
 
 class DoctorReportService {

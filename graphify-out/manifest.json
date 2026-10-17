@@ -240,9 +240,9 @@
     "semantic_hash": "ebe09cbb53a9edabf5b27e27548a91b1"
   },
   "lib/features/doctor_report/presentation/pages/doctor_report_result_page.dart": {
-    "mtime": 1792233216.6828818,
-    "seen": 1792233614.7899318,
-    "ast_hash": "506e9155a66a78e739a5d969f9920e85",
+    "mtime": 1792251935.8057535,
+    "seen": 1792252085.938749,
+    "ast_hash": "8e646c39dedc8f28c4417f7a0e48ab10",
     "semantic_hash": ""
   },
   "lib/features/doctor_report/presentation/pages/doctor_report_setup_page.dart": {
@@ -816,10 +816,10 @@
     "semantic_hash": "b103a6d9b311e703708f2a774c886fe6"
   },
   "pubspec.yaml": {
-    "mtime": 1792232469.2962637,
-    "seen": 1792233614.799481,
-    "ast_hash": "33c313b1e0684c0eff7ccf69126c3ba4",
-    "semantic_hash": "33c313b1e0684c0eff7ccf69126c3ba4"
+    "mtime": 1792251180.8501332,
+    "seen": 1792251581.7392483,
+    "ast_hash": "fca7bd9b3d1538a325e8f42bc183b2be",
+    "semantic_hash": ""
   },
   "analysis_options.yaml": {
     "mtime": 1789138553.6772172,
@@ -1062,33 +1062,33 @@
     "semantic_hash": ""
   },
   "test/failures/app_logo_isolatedDiff.png": {
-    "mtime": 1792233584.905845,
-    "seen": 1792233614.802481,
+    "mtime": 1792251111.245754,
+    "seen": 1792251581.7417552,
     "ast_hash": "bbc1f4f1b7776bf6d321227da88cee88",
     "semantic_hash": ""
   },
   "test/failures/app_logo_maskedDiff.png": {
-    "mtime": 1792233584.8928485,
-    "seen": 1792233614.802481,
+    "mtime": 1792251111.2272015,
+    "seen": 1792251581.7417552,
     "ast_hash": "49701476c58c984d01e10b68b0a417e4",
     "semantic_hash": ""
   },
   "test/failures/app_logo_masterImage.png": {
-    "mtime": 1792233584.8723576,
-    "seen": 1792233614.802481,
+    "mtime": 1792251111.1991334,
+    "seen": 1792251581.7417552,
     "ast_hash": "56532e3d234b605365067edb0e572263",
     "semantic_hash": ""
   },
   "test/failures/app_logo_testImage.png": {
-    "mtime": 1792233584.8807292,
-    "seen": 1792233614.802481,
+    "mtime": 1792251111.2104793,
+    "seen": 1792251581.7417552,
     "ast_hash": "0e54e47a1e65eade15a9a4502b657fdd",
     "semantic_hash": ""
   },
   "lib/features/doctor_report/services/doctor_report_service.dart": {
-    "mtime": 1792234173.180402,
-    "seen": 1792234602.8585477,
-    "ast_hash": "cd458b92f4bcddd254ddba0c3a2d1e25",
+    "mtime": 1792251302.4321642,
+    "seen": 1792251581.7342484,
+    "ast_hash": "4a2641fbc60bf60706deffe749e73470",
     "semantic_hash": ""
   },
   "test/doctor_report_test.dart": {
@@ -1113,6 +1113,24 @@
     "mtime": 1792237311.0925312,
     "seen": 1792237431.6210032,
     "ast_hash": "3e5bb226558e2cb3efd9586c606fa37f",
+    "semantic_hash": ""
+  },
+  "lib/features/doctor_report/presentation/widgets/doctor_report_ai_observation_card.dart": {
+    "mtime": 1792252501.3152125,
+    "seen": 1792252564.1452193,
+    "ast_hash": "62b4362a9a9a4503e1e8f5fc06dc620b",
+    "semantic_hash": ""
+  },
+  "lib/features/doctor_report/services/doctor_report_ai_service.dart": {
+    "mtime": 1792251918.6104636,
+    "seen": 1792252085.938749,
+    "ast_hash": "bfb98d3b10958810f63d09af322d151d",
+    "semantic_hash": ""
+  },
+  "test/doctor_report_ai_test.dart": {
+    "mtime": 1792252292.7564056,
+    "seen": 1792252332.6017513,
+    "ast_hash": "174779f935337538e576a54b76e907c3",
     "semantic_hash": ""
   }
 }

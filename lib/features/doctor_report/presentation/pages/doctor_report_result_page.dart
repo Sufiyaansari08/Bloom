@@ -8,6 +8,9 @@ import '../../../../core/widgets/info_dialog.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../services/pdf_generator_service.dart';
 import '../../services/doctor_report_service.dart';
+import '../../services/doctor_report_ai_service.dart';
+import '../widgets/doctor_report_ai_observation_card.dart';
+import '../../../profile/presentation/providers/privacy_security_provider.dart';
 
 class DoctorReportResultPage extends ConsumerWidget {
   final int cycleCount;
@@ -31,6 +34,18 @@ class DoctorReportResultPage extends ConsumerWidget {
       allSymptoms: allSymptoms,
       requestedCycleCount: cycleCount,
     );
+
+    final isAiEnabled = ref.watch(
+      privacySecurityProvider.select((s) => s.isAiDataUsageEnabled),
+    );
+    final aiState = ref.watch(doctorReportAiProvider(reportData));
+    final activeSummary = (isAiEnabled &&
+            aiState.summary.isNotEmpty &&
+            aiState.isAiGenerated)
+        ? aiState.summary
+        : reportData.observationsSummary;
+    final reportDataForPdf =
+        reportData.copyWith(observationsSummary: activeSummary);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -850,60 +865,7 @@ class DoctorReportResultPage extends ConsumerWidget {
             // 5. OBSERVATIONS
             _buildSectionTitle('Observations'),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primaryPink.withValues(alpha: 0.15),
-                    AppColors.primaryPurple.withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.primaryPink.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome,
-                          color: AppColors.primaryPurple,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Your body summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryPurple,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    reportData.observationsSummary,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.text,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            DoctorReportAiObservationCard(reportData: reportData),
             const SizedBox(height: 48),
 
             // Export Buttons
@@ -912,7 +874,7 @@ class DoctorReportResultPage extends ConsumerWidget {
               height: 56,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final bytes = await PdfGeneratorService.generateDoctorReport(reportData);
+                  final bytes = await PdfGeneratorService.generateDoctorReport(reportDataForPdf);
                   await Printing.sharePdf(bytes: bytes, filename: 'bloom_doctor_report.pdf');
                 },
                 icon: const Icon(Icons.ios_share, color: Colors.white),
@@ -938,7 +900,7 @@ class DoctorReportResultPage extends ConsumerWidget {
               height: 56,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  final bytes = await PdfGeneratorService.generateDoctorReport(reportData);
+                  final bytes = await PdfGeneratorService.generateDoctorReport(reportDataForPdf);
                   await Printing.layoutPdf(
                     onLayout: (format) async => bytes,
                     name: 'bloom_doctor_report.pdf',

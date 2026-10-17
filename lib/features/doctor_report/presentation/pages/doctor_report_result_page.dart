@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:printing/printing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
+import '../../../../core/database/database_providers.dart';
 import '../../services/pdf_generator_service.dart';
+import '../../services/doctor_report_service.dart';
 
-class DoctorReportResultPage extends StatelessWidget {
-  const DoctorReportResultPage({super.key});
+class DoctorReportResultPage extends ConsumerWidget {
+  final int cycleCount;
+
+  const DoctorReportResultPage({
+    super.key,
+    this.cycleCount = 6,
+  });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProfileStreamProvider).value;
+    final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
+    final allLogs = ref.watch(allDailyLogsStreamProvider).value ?? [];
+    final allSymptoms = ref.watch(allSymptomsStreamProvider).value ?? [];
+
+    final reportData = DoctorReportService.computeReportData(
+      user: user,
+      allCycles: cycles,
+      allLogs: allLogs,
+      allSymptoms: allSymptoms,
+      requestedCycleCount: cycleCount,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -39,7 +60,8 @@ class DoctorReportResultPage extends StatelessWidget {
               showPageInfoDialog(
                 context,
                 title: 'Doctor Report',
-                description: 'This is your generated health report. It summarizes your cycle lengths, symptoms, and lifestyle trends for you to share with your healthcare provider.',
+                description:
+                    'This is your generated health report. It summarizes your cycle lengths, symptoms, and lifestyle trends for you to share with your healthcare provider.',
               );
             },
           ),
@@ -50,8 +72,6 @@ class DoctorReportResultPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Cover Page (Panel 6)
-
             // Top Banner
             Container(
               padding: const EdgeInsets.all(20),
@@ -87,8 +107,7 @@ class DoctorReportResultPage extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           'Doctor Report',
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 color: AppColors.primaryPurple,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
@@ -96,9 +115,9 @@ class DoctorReportResultPage extends StatelessWidget {
                               ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Feb 1 – Jul 31, 2026 (6 cycles)',
-                          style: TextStyle(
+                        Text(
+                          reportData.dateRangeText,
+                          style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.secondaryText,
                           ),
@@ -140,12 +159,15 @@ class DoctorReportResultPage extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: 5,
-                        child: _buildInfoCol('Name', 'Ananya Sharma'),
+                        child: _buildInfoCol('Name', reportData.userName),
                       ),
-                      Expanded(flex: 3, child: _buildInfoCol('Age', '24')),
+                      Expanded(
+                        flex: 3,
+                        child: _buildInfoCol('Age', reportData.userAge),
+                      ),
                       Expanded(
                         flex: 4,
-                        child: _buildInfoCol('Date of Birth', '12 Jan 2002'),
+                        child: _buildInfoCol('Date of Birth', reportData.userDob),
                       ),
                     ],
                   ),
@@ -154,15 +176,15 @@ class DoctorReportResultPage extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: 5,
-                        child: _buildInfoCol('Height', '165 cm'),
+                        child: _buildInfoCol('Height', reportData.userHeight),
                       ),
                       Expanded(
                         flex: 3,
-                        child: _buildInfoCol('Weight', '60 kg'),
+                        child: _buildInfoCol('Weight', reportData.userWeight),
                       ),
                       Expanded(
                         flex: 4,
-                        child: _buildInfoCol('Blood Group', 'O+'),
+                        child: _buildInfoCol('Blood Group', reportData.userBloodGroup),
                       ),
                     ],
                   ),
@@ -200,7 +222,7 @@ class DoctorReportResultPage extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _buildMetricBox(
-                            '29',
+                            '${reportData.avgCycleLength}',
                             'days',
                             'Avg. cycle length',
                           ),
@@ -208,7 +230,7 @@ class DoctorReportResultPage extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildMetricBox(
-                            '5',
+                            '${reportData.avgPeriodLength}',
                             'days',
                             'Avg. period length',
                           ),
@@ -216,7 +238,7 @@ class DoctorReportResultPage extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _buildMetricBox(
-                            '28-31',
+                            reportData.cycleRange,
                             'days',
                             'Cycle range',
                           ),
@@ -256,7 +278,6 @@ class DoctorReportResultPage extends StatelessWidget {
             // 1. CYCLE SUMMARY
             _buildSectionTitle('Cycle Summary'),
             const SizedBox(height: 16),
-            // Average Cycle Length Bar Chart
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -279,17 +300,17 @@ class DoctorReportResultPage extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
-                    children: const [
+                    children: [
                       Text(
-                        '29',
-                        style: TextStyle(
+                        '${reportData.avgCycleLength}',
+                        style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: AppColors.text,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Text(
+                      const SizedBox(width: 4),
+                      const Text(
                         'days',
                         style: TextStyle(
                           fontSize: 16,
@@ -304,7 +325,7 @@ class DoctorReportResultPage extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         minY: 0,
-                        maxY: 35,
+                        maxY: (reportData.longestCycle + 5).toDouble().clamp(35.0, 60.0),
                         gridData: const FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -372,10 +393,9 @@ class DoctorReportResultPage extends StatelessWidget {
                             },
                           ),
                         ),
-                        barGroups: List.generate(6, (index) {
-                          final data = [28.0, 30.0, 29.0, 31.0, 30.0, 29.0];
-                          return _buildBarData(index + 1, data[index]);
-                        }),
+                        barGroups: reportData.cycleBarPoints.map((pt) {
+                          return _buildBarData(pt.index, pt.length.toDouble());
+                        }).toList(),
                       ),
                     ),
                   ),
@@ -390,7 +410,7 @@ class DoctorReportResultPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _buildMetricBox(
-                      '28',
+                      '${reportData.shortestCycle}',
                       'days',
                       'Shortest cycle',
                       isHorizontal: true,
@@ -399,7 +419,7 @@ class DoctorReportResultPage extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildMetricBox(
-                      '31',
+                      '${reportData.longestCycle}',
                       'days',
                       'Longest cycle',
                       isHorizontal: true,
@@ -408,7 +428,7 @@ class DoctorReportResultPage extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildMetricBox(
-                      '5',
+                      '${reportData.avgPeriodLength}',
                       'days',
                       'Average period',
                       isHorizontal: true,
@@ -432,8 +452,8 @@ class DoctorReportResultPage extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
+                      children: [
+                        const Text(
                           'Cycle variation',
                           style: TextStyle(
                             fontSize: 16,
@@ -441,21 +461,21 @@ class DoctorReportResultPage extends StatelessWidget {
                             color: AppColors.text,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              '±2',
-                              style: TextStyle(
+                              '±${reportData.cycleVariationDays}',
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.text,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Text(
+                            const SizedBox(width: 4),
+                            const Text(
                               'days',
                               style: TextStyle(
                                 fontSize: 14,
@@ -464,10 +484,10 @@ class DoctorReportResultPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'Your cycles are fairly consistent.',
-                          style: TextStyle(
+                          reportData.variationText,
+                          style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.secondaryText,
                           ),
@@ -480,14 +500,14 @@ class DoctorReportResultPage extends StatelessWidget {
                     height: 64,
                     child: Stack(
                       alignment: Alignment.center,
-                      children: const [
-                        CircularProgressIndicator(
+                      children: [
+                        const CircularProgressIndicator(
                           value: 1.0,
                           strokeWidth: 8,
                           color: AppColors.border,
                         ),
                         CircularProgressIndicator(
-                          value: 0.8,
+                          value: (1.0 - (reportData.cycleVariationDays / 10.0)).clamp(0.2, 1.0),
                           strokeWidth: 8,
                           color: AppColors.primaryPurple,
                           strokeCap: StrokeCap.round,
@@ -525,17 +545,17 @@ class DoctorReportResultPage extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
-                    children: const [
+                    children: [
                       Text(
-                        '5',
-                        style: TextStyle(
+                        '${reportData.avgPeriodLength}',
+                        style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: AppColors.text,
                         ),
                       ),
-                      SizedBox(width: 4),
-                      Text(
+                      const SizedBox(width: 4),
+                      const Text(
                         'days avg',
                         style: TextStyle(
                           fontSize: 16,
@@ -550,7 +570,7 @@ class DoctorReportResultPage extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         minY: 0,
-                        maxY: 10,
+                        maxY: (reportData.longestPeriod + 3).toDouble().clamp(10.0, 20.0),
                         gridData: const FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -618,10 +638,9 @@ class DoctorReportResultPage extends StatelessWidget {
                             },
                           ),
                         ),
-                        barGroups: List.generate(6, (index) {
-                          final data = [4.0, 5.0, 5.0, 6.0, 4.0, 5.0];
-                          return _buildPeriodBarData(index + 1, data[index]);
-                        }),
+                        barGroups: reportData.periodBarPoints.map((pt) {
+                          return _buildPeriodBarData(pt.index, pt.length.toDouble());
+                        }).toList(),
                       ),
                     ),
                   ),
@@ -636,7 +655,7 @@ class DoctorReportResultPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _buildMetricBox(
-                      '4',
+                      '${reportData.shortestPeriod}',
                       'days',
                       'Shortest period',
                       bgColor: AppColors.primaryPurple.withValues(alpha: 0.1),
@@ -646,7 +665,7 @@ class DoctorReportResultPage extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildMetricBox(
-                      '6',
+                      '${reportData.longestPeriod}',
                       'days',
                       'Longest period',
                       bgColor: AppColors.primaryPurple.withValues(alpha: 0.1),
@@ -656,9 +675,9 @@ class DoctorReportResultPage extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildMetricBox(
-                      '6',
-                      '/10',
-                      'Moderate pain',
+                      reportData.avgPainLevel != null ? '${reportData.avgPainLevel!.round()}' : '--',
+                      reportData.avgPainLevel != null ? '/10' : '',
+                      reportData.painLabel,
                       bgColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                       isHorizontal: true,
                     ),
@@ -672,57 +691,52 @@ class DoctorReportResultPage extends StatelessWidget {
             _buildSectionTitle('Symptoms Patterns'),
             const SizedBox(height: 16),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'When symptoms usually occur',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
+              child: reportData.symptomPatterns.isNotEmpty
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'When symptoms usually occur',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        for (int i = 0; i < reportData.symptomPatterns.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 24),
+                          _buildTimelineRow(
+                            reportData.symptomPatterns[i].icon,
+                            reportData.symptomPatterns[i].name,
+                            reportData.symptomPatterns[i].subtitle,
+                            reportData.symptomPatterns[i].phase,
+                            reportData.symptomPatterns[i].color,
+                          ),
+                        ],
+                      ],
+                    )
+                  : const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(
+                          'No symptoms logged for this time range.\nTrack symptoms during daily check-ins to view patterns here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.secondaryText,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.face,
-                    'Headache',
-                    'Usually 1-2 days before your period',
-                    'Before period',
-                    AppColors.primaryPink,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.bubble_chart,
-                    'Bloating',
-                    'Usually 2-4 days before your period',
-                    'Before period',
-                    AppColors.primaryPink,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.waves,
-                    'Cramps',
-                    'Usually during the first 1-2 days of your period',
-                    'During period',
-                    AppColors.primaryPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.mood_bad,
-                    'Mood Swings',
-                    'Usually during the first 2 days of your period',
-                    'During period',
-                    AppColors.primaryPurple,
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 32),
 
@@ -730,49 +744,52 @@ class DoctorReportResultPage extends StatelessWidget {
             _buildSectionTitle('Mood Trends'),
             const SizedBox(height: 16),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Mood by cycle phase (average)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.text,
+              child: reportData.moodTrends.isNotEmpty
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Mood by cycle phase (average)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        for (int i = 0; i < reportData.moodTrends.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 24),
+                          _buildTimelineRow(
+                            reportData.moodTrends[i].icon,
+                            reportData.moodTrends[i].mood,
+                            reportData.moodTrends[i].subtitle,
+                            reportData.moodTrends[i].phase,
+                            reportData.moodTrends[i].color,
+                          ),
+                        ],
+                      ],
+                    )
+                  : const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(
+                          'No mood entries recorded for this time range.\nDaily check-in logs will automatically surface trends here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.secondaryText,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.sentiment_dissatisfied,
-                    'Not Great',
-                    'Usually 3-5 days before your period',
-                    'Before period',
-                    AppColors.primaryPurple,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.mood_bad,
-                    'Bad',
-                    'Usually during the first 1-2 days of your period',
-                    'During period',
-                    AppColors.primaryPink,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTimelineRow(
-                    Icons.sentiment_very_satisfied,
-                    'Great',
-                    'Usually 2-5 days after your period',
-                    'After period',
-                    AppColors.success,
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 32),
 
@@ -801,28 +818,28 @@ class DoctorReportResultPage extends StatelessWidget {
                   _buildAverageRow(
                     Icons.nights_stay_outlined,
                     'Sleep',
-                    '6.5 hrs',
+                    reportData.sleepFormatted,
                     Colors.indigo,
                   ),
                   const SizedBox(height: 20),
                   _buildAverageRow(
                     Icons.local_drink_outlined,
                     'Water intake',
-                    '1.5 L',
+                    reportData.waterFormatted,
                     Colors.lightBlue,
                   ),
                   const SizedBox(height: 20),
                   _buildAverageRow(
                     Icons.directions_walk,
                     'Activity level',
-                    'Moderate',
+                    reportData.activityFormatted,
                     Colors.green,
                   ),
                   const SizedBox(height: 20),
                   _buildAverageRow(
                     Icons.sentiment_dissatisfied,
                     'Stress level',
-                    'High',
+                    reportData.stressFormatted,
                     AppColors.primaryPink,
                   ),
                 ],
@@ -876,9 +893,9 @@ class DoctorReportResultPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Based on your data, your cycle is fairly regular with an average length of 29 days. You tend to experience moderate pain and mood swings primarily during the first few days of your period. High stress levels have been noted recently, which may affect your overall energy and sleep quality.',
-                    style: TextStyle(
+                  Text(
+                    reportData.observationsSummary,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.text,
                       height: 1.6,
@@ -889,13 +906,13 @@ class DoctorReportResultPage extends StatelessWidget {
             ),
             const SizedBox(height: 48),
 
-            // Export Buttons (Moved to bottom)
+            // Export Buttons
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  final bytes = await PdfGeneratorService.generateDoctorReport();
+                  final bytes = await PdfGeneratorService.generateDoctorReport(reportData);
                   await Printing.sharePdf(bytes: bytes, filename: 'bloom_doctor_report.pdf');
                 },
                 icon: const Icon(Icons.ios_share, color: Colors.white),
@@ -921,7 +938,7 @@ class DoctorReportResultPage extends StatelessWidget {
               height: 56,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  final bytes = await PdfGeneratorService.generateDoctorReport();
+                  final bytes = await PdfGeneratorService.generateDoctorReport(reportData);
                   await Printing.layoutPdf(
                     onLayout: (format) async => bytes,
                     name: 'bloom_doctor_report.pdf',
@@ -954,6 +971,7 @@ class DoctorReportResultPage extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildSectionTitle(String title) {
     return Align(
       alignment: Alignment.centerLeft,

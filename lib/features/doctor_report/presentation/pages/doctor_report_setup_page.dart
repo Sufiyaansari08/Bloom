@@ -1,35 +1,64 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/info_dialog.dart';
+import '../../../../core/database/database_providers.dart';
 
-class DoctorReportSetupPage extends StatefulWidget {
+class DoctorReportSetupPage extends ConsumerStatefulWidget {
   const DoctorReportSetupPage({super.key});
 
   @override
-  State<DoctorReportSetupPage> createState() => _DoctorReportSetupPageState();
+  ConsumerState<DoctorReportSetupPage> createState() => _DoctorReportSetupPageState();
 }
 
-class _DoctorReportSetupPageState extends State<DoctorReportSetupPage> {
-  final List<String> _cycleOptions = [
-    'Last cycle (Jul 25 - Aug 21, 2026)',
-    'Last 2 cycles (Jun 27 - Aug 21, 2026)',
-    'Last 3 cycles (May 30 - Aug 21, 2026)',
-    'Last 4 cycles (May 2 - Aug 21, 2026)',
-    'Last 5 cycles (Apr 4 - Aug 21, 2026)',
-    'Last 6 cycles (Mar 7 - Aug 21, 2026)',
-  ];
-
-  late String _selectedRange;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedRange = _cycleOptions.last;
-  }
+class _DoctorReportSetupPageState extends ConsumerState<DoctorReportSetupPage> {
+  int? _selectedCycles;
 
   @override
   Widget build(BuildContext context) {
+    final cycles = ref.watch(allCyclesStreamProvider).value ?? [];
+    final activeCycles = cycles.where((c) => !c.isDeleted).toList()
+      ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final completedCycles = activeCycles
+        .where((c) => c.endDate != null && c.cycleLength != null && c.cycleLength! > 0)
+        .toList();
+
+    // Build dynamic options from database
+    final Map<int, String> cycleOptions = {};
+    if (completedCycles.isNotEmpty) {
+      final maxAvailable = math.min(6, completedCycles.length);
+      for (int count = 1; count <= maxAvailable; count++) {
+        final sublist = completedCycles.sublist(completedCycles.length - count);
+        final start = sublist.first.startDate;
+        final end = sublist.last.endDate ??
+            sublist.last.startDate.add(
+              Duration(days: sublist.last.cycleLength ?? 28),
+            );
+        final dateLabel = '${DateFormat('MMM d').format(start)} - ${DateFormat('MMM d, yyyy').format(end)}';
+        if (count == 1) {
+          cycleOptions[count] = 'Last cycle ($dateLabel)';
+        } else {
+          cycleOptions[count] = 'Last $count cycles ($dateLabel)';
+        }
+      }
+    } else if (activeCycles.isNotEmpty) {
+      final start = activeCycles.last.startDate;
+      cycleOptions[1] = 'Current cycle (started ${DateFormat('MMM d, yyyy').format(start)})';
+    } else {
+      cycleOptions[1] = 'Baseline profile (1 cycle)';
+    }
+
+    // Default to the max available option (e.g. 6 or total completed)
+    if (_selectedCycles == null || !cycleOptions.containsKey(_selectedCycles)) {
+      _selectedCycles = cycleOptions.keys.last;
+    }
+
+    final selectedLabel = cycleOptions[_selectedCycles] ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -92,8 +121,7 @@ class _DoctorReportSetupPageState extends State<DoctorReportSetupPage> {
                       children: [
                         Text(
                           'Your health\nsummary, ready\nfor your doctor.',
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                 color: AppColors.primaryPurple,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
@@ -152,25 +180,25 @@ class _DoctorReportSetupPageState extends State<DoctorReportSetupPage> {
                   ),
                 ],
               ),
-              child: PopupMenuButton<String>(
-                initialValue: _selectedRange,
+              child: PopupMenuButton<int>(
+                initialValue: _selectedCycles,
                 position: PopupMenuPosition.under,
                 color: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
                 offset: const Offset(0, 10),
-                onSelected: (String value) {
+                onSelected: (int value) {
                   setState(() {
-                    _selectedRange = value;
+                    _selectedCycles = value;
                   });
                 },
                 itemBuilder: (BuildContext context) {
-                  return _cycleOptions.map((String choice) {
-                    return PopupMenuItem<String>(
-                      value: choice,
+                  return cycleOptions.entries.map((entry) {
+                    return PopupMenuItem<int>(
+                      value: entry.key,
                       child: Text(
-                        choice,
+                        entry.value,
                         style: const TextStyle(
                           fontSize: 14,
                           color: AppColors.text,
@@ -182,12 +210,15 @@ class _DoctorReportSetupPageState extends State<DoctorReportSetupPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _selectedRange,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        selectedLabel,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const Icon(
@@ -242,7 +273,7 @@ class _DoctorReportSetupPageState extends State<DoctorReportSetupPage> {
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  context.push('/doctor_report/result');
+                  context.push('/doctor_report/result?cycles=$_selectedCycles');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryPurple,

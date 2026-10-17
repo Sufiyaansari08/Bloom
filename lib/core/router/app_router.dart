@@ -257,7 +257,10 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
         ),
         GoRoute(
           path: '/doctor_report/result',
-          builder: (context, state) => const DoctorReportResultPage(),
+          builder: (context, state) {
+            final cycles = int.tryParse(state.uri.queryParameters['cycles'] ?? '') ?? 6;
+            return DoctorReportResultPage(cycleCount: cycles);
+          },
         ),
         GoRoute(
           path: '/profile',

@@ -117,12 +117,12 @@ class PdfGeneratorService {
   }
 
   static pw.Widget _buildPatientInfo([DoctorReportData? data]) {
-    final name = _cleanPdfText(data?.userName ?? 'Ananya Sharma');
-    final age = _cleanPdfText(data?.userAge ?? '24');
-    final dob = _cleanPdfText(data?.userDob ?? '12 Jan 2002');
-    final height = _cleanPdfText(data?.userHeight ?? '165 cm');
-    final weight = _cleanPdfText(data?.userWeight ?? '60 kg');
-    final bloodGroup = _cleanPdfText(data?.userBloodGroup ?? 'O+');
+    final name = _cleanPdfText(data?.userName ?? 'Guest');
+    final age = _cleanPdfText(data?.userAge ?? '-');
+    final dob = _cleanPdfText(data?.userDob ?? '-');
+    final height = _cleanPdfText(data?.userHeight ?? '-');
+    final weight = _cleanPdfText(data?.userWeight ?? '-');
+    final bloodGroup = _cleanPdfText(data?.userBloodGroup ?? '-');
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,

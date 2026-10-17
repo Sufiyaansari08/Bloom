@@ -5,6 +5,7 @@ import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
 import '../../features/onboarding/presentation/pages/name_page.dart';
+import '../../features/onboarding/presentation/pages/health_details_page.dart';
 import '../../features/onboarding/presentation/pages/last_period_page.dart';
 import '../../features/onboarding/presentation/pages/period_duration_page.dart';
 import '../../features/onboarding/presentation/pages/cycle_duration_page.dart';
@@ -84,6 +85,10 @@ GoRouter createAppRouter({String initialLocation = '/welcome'}) {
     GoRoute(
       path: '/onboarding/name',
       builder: (context, state) => const NamePage(),
+    ),
+    GoRoute(
+      path: '/onboarding/health_details',
+      builder: (context, state) => const HealthDetailsPage(),
     ),
     GoRoute(
       path: '/onboarding/last_period',

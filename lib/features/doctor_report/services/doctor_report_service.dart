@@ -173,8 +173,8 @@ class DoctorReportService {
   }) {
     // 1. Patient Info
     final userName = user?.name.isNotEmpty == true ? user!.name : 'Guest';
-    String userAge = '24';
-    String userDob = 'Not set';
+    String userAge = '-';
+    String userDob = '-';
     if (user?.dateOfBirth != null) {
       final dob = user!.dateOfBirth!;
       userDob = DateFormat('d MMM yyyy').format(dob);
@@ -183,14 +183,27 @@ class DoctorReportService {
       if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
         age--;
       }
-      userAge = age > 0 ? '$age' : '--';
+      userAge = age > 0 ? '$age' : '-';
     }
 
-    final userHeight = user?.heightCm != null ? '${user!.heightCm!.toInt()} cm' : 'Not set';
-    final userWeight = user?.weightKg != null ? '${user!.weightKg!.toInt()} kg' : 'Not set';
-    final userBloodGroup = (user?.bloodGroup != null && user!.bloodGroup!.isNotEmpty)
-        ? user.bloodGroup!
-        : 'Not set';
+    final userHeight = (user?.heightCm != null && user!.heightCm! > 0)
+        ? '${user.heightCm!.toInt()} cm'
+        : '-';
+    final userWeight = (user?.weightKg != null && user!.weightKg! > 0)
+        ? '${user.weightKg!.toInt()} kg'
+        : '-';
+
+    final rawBg = user?.bloodGroup?.trim();
+    final String userBloodGroup;
+    if (rawBg == null ||
+        rawBg.isEmpty ||
+        rawBg.toLowerCase().contains("don't know") ||
+        rawBg.toLowerCase().contains("dont know") ||
+        rawBg == '-') {
+      userBloodGroup = '-';
+    } else {
+      userBloodGroup = rawBg;
+    }
 
     // 2. Filter targeted cycles
     final activeCycles = allCycles.where((c) => !c.isDeleted).toList()

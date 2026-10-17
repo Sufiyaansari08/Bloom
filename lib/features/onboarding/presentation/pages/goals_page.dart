@@ -73,39 +73,60 @@ class GoalsPage extends ConsumerWidget {
                 text: 'Save',
                 onPressed: () async {
                   final userRepo = ref.read(userRepositoryProvider);
-                  final currentUser = await userRepo.getUserProfile();
-                  if (currentUser != null && state.userName != null) {
-                    int? cycleLen;
-                    if (state.cycleDuration != null && state.cycleDuration!.contains(' ')) {
-                      cycleLen = int.tryParse(state.cycleDuration!.split(' ')[0]);
-                    }
-                    int? periodLen;
-                    if (state.periodDuration != null && state.periodDuration!.contains(' ')) {
-                      periodLen = int.tryParse(state.periodDuration!.split(' ')[0]);
-                    }
+                  var currentUser = await userRepo.getUserProfile();
+                  int? cycleLen;
+                  if (state.cycleDuration != null && state.cycleDuration!.contains(' ')) {
+                    cycleLen = int.tryParse(state.cycleDuration!.split(' ')[0]);
+                  }
+                  int? periodLen;
+                  if (state.periodDuration != null && state.periodDuration!.contains(' ')) {
+                    periodLen = int.tryParse(state.periodDuration!.split(' ')[0]);
+                  }
 
+                  if (currentUser != null) {
                     await userRepo.saveUserProfile(
                       currentUser.toCompanion(true).copyWith(
-                        name: drift.Value(state.userName!),
+                        name: drift.Value(state.userName ?? currentUser.name),
                         email: state.userEmail != null ? drift.Value(state.userEmail) : const drift.Value.absent(),
+                        dateOfBirth: drift.Value(state.dateOfBirth),
+                        heightCm: drift.Value(state.heightCm),
+                        weightKg: drift.Value(state.weightKg),
+                        bloodGroup: drift.Value(state.bloodGroup),
                         avgCycleLength: cycleLen != null ? drift.Value(cycleLen) : const drift.Value.absent(),
                         avgPeriodLength: periodLen != null ? drift.Value(periodLen) : const drift.Value.absent(),
+                        primaryGoal: state.goals.isNotEmpty ? drift.Value(state.goals.join(', ')) : const drift.Value.absent(),
                       ),
                     );
+                  } else {
+                    final userId = DateTime.now().millisecondsSinceEpoch.toString();
+                    await userRepo.saveUserProfile(
+                      UserProfilesCompanion.insert(
+                        id: userId,
+                        name: state.userName ?? 'User',
+                        email: drift.Value(state.userEmail),
+                        dateOfBirth: drift.Value(state.dateOfBirth),
+                        heightCm: drift.Value(state.heightCm),
+                        weightKg: drift.Value(state.weightKg),
+                        bloodGroup: drift.Value(state.bloodGroup),
+                        avgCycleLength: drift.Value(cycleLen ?? 28),
+                        avgPeriodLength: drift.Value(periodLen ?? 5),
+                        primaryGoal: drift.Value(state.goals.isNotEmpty ? state.goals.join(', ') : null),
+                      ),
+                    );
+                    currentUser = await userRepo.getUserProfile();
+                  }
 
-                    // Create an initial cycle based on lastPeriodDate
-                    if (state.lastPeriodDate != null) {
-                      final cycleRepo = ref.read(cycleRepositoryProvider);
-                      // Since we use uuid for IDs, let's use the uuid package or a simple timestamp
-                      final newCycle = CyclesCompanion.insert(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        userId: currentUser.id,
-                        startDate: state.lastPeriodDate!,
-                        cycleLength: drift.Value(cycleLen),
-                        periodLength: drift.Value(periodLen),
-                      );
-                      await cycleRepo.insertCycle(newCycle);
-                    }
+                  // Create an initial cycle based on lastPeriodDate
+                  if (currentUser != null && state.lastPeriodDate != null) {
+                    final cycleRepo = ref.read(cycleRepositoryProvider);
+                    final newCycle = CyclesCompanion.insert(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      userId: currentUser.id,
+                      startDate: state.lastPeriodDate!,
+                      cycleLength: drift.Value(cycleLen),
+                      periodLength: drift.Value(periodLen),
+                    );
+                    await cycleRepo.insertCycle(newCycle);
                   }
                   await AuthStorageService.instance.setLoggedIn(true);
                   if (context.mounted) {

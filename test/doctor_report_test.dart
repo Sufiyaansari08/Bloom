@@ -12,9 +12,10 @@ void main() {
   UserProfile createTestUser({
     String name = 'Test User',
     DateTime? dob,
-    double height = 168.0,
-    double weight = 58.0,
-    String bloodGroup = 'B+',
+    bool includeDob = true,
+    double? height = 168.0,
+    double? weight = 58.0,
+    String? bloodGroup = 'B+',
     int avgCycle = 28,
     int avgPeriod = 5,
   }) {
@@ -22,7 +23,7 @@ void main() {
       id: 'test_user_id',
       name: name,
       email: 'test@example.com',
-      dateOfBirth: dob ?? DateTime(2000, 5, 15),
+      dateOfBirth: includeDob ? (dob ?? DateTime(2000, 5, 15)) : null,
       heightCm: height,
       weightKg: weight,
       bloodGroup: bloodGroup,
@@ -216,8 +217,54 @@ void main() {
       expect(report.moodTrends.isEmpty, isTrue);
     });
 
+    test('maps "Don\'t know", empty or null blood group to "-"', () {
+      final userDontKnow = createTestUser(
+        name: 'Sara',
+        bloodGroup: "Don't know",
+      );
+      final report1 = DoctorReportService.computeReportData(
+        user: userDontKnow,
+        allCycles: [],
+        allLogs: [],
+        allSymptoms: [],
+      );
+      expect(report1.userBloodGroup, '-');
+
+      final userEmpty = createTestUser(
+        name: 'Sara',
+        bloodGroup: '',
+      );
+      final report2 = DoctorReportService.computeReportData(
+        user: userEmpty,
+        allCycles: [],
+        allLogs: [],
+        allSymptoms: [],
+      );
+      expect(report2.userBloodGroup, '-');
+
+      // Test with null DOB, height, weight
+      final userWithoutDetails = createTestUser(
+        name: 'Priya',
+        includeDob: false,
+        height: null,
+        weight: null,
+        bloodGroup: null,
+      );
+      final report3 = DoctorReportService.computeReportData(
+        user: userWithoutDetails,
+        allCycles: [],
+        allLogs: [],
+        allSymptoms: [],
+      );
+      expect(report3.userBloodGroup, '-');
+      expect(report3.userHeight, '-');
+      expect(report3.userWeight, '-');
+      expect(report3.userDob, '-');
+      expect(report3.userAge, '-');
+    });
+
     test('generates PDF bytes successfully with real DoctorReportData', () async {
-      final user = createTestUser(name: 'Ananya');
+      final user = createTestUser(name: 'Ananya', bloodGroup: "Don't know");
       final report = DoctorReportService.computeReportData(
         user: user,
         allCycles: [],

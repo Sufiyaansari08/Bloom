@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 class BloomLifestyleCard extends StatelessWidget {
   final String title;
   final IconData icon;
+  final Color? iconColor;
   final String? valueText;
   final Widget? trailing;
   final Widget? bottomWidget;
@@ -13,6 +14,7 @@ class BloomLifestyleCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.icon,
+    this.iconColor,
     this.valueText,
     this.trailing,
     this.bottomWidget,
@@ -35,7 +37,7 @@ class BloomLifestyleCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: AppColors.primaryPurple, size: 28),
+                Icon(icon, color: iconColor ?? AppColors.primaryPurple, size: 28),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(

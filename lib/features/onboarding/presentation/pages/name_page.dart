@@ -70,7 +70,7 @@ class _NamePageState extends ConsumerState<NamePage> {
                   final name = _nameController.text.trim();
                   if (name.isNotEmpty) {
                     ref.read(onboardingProvider.notifier).setUserName(name);
-                    context.push('/onboarding/last_period');
+                    context.push('/onboarding/health_details');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Please enter your name')),

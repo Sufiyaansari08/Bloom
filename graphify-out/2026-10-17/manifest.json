@@ -1134,9 +1134,9 @@
     "semantic_hash": ""
   },
   "lib/features/welcome/presentation/pages/splash_page.dart": {
-    "mtime": 1792254646.1932473,
-    "seen": 1792254698.5763662,
-    "ast_hash": "72d95c777435a41c821e3ce630d163a8",
+    "mtime": 1792254906.1816027,
+    "seen": 1792254942.4847617,
+    "ast_hash": "4465e090a549849feed805c1ea0f462b",
     "semantic_hash": ""
   },
   "test/splash_page_test.dart": {

@@ -13,8 +13,14 @@ import 'features/reminders/presentation/providers/notification_sync_provider.dar
 import 'features/profile/presentation/providers/privacy_security_provider.dart';
 import 'features/profile/presentation/widgets/in_app_security_gate.dart';
 
+import 'core/network/api_constants.dart';
+import 'features/doctor_report/services/doctor_report_ai_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure production backend AI endpoint
+  DoctorReportAiService.backendUrl = '${ApiConstants.baseUrl}${ApiConstants.doctorSummary}';
 
   final initialSecurityState =
       await SecurityStorageService.instance.loadSettings();

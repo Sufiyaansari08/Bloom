@@ -16,11 +16,45 @@ class SignUpPage extends ConsumerStatefulWidget {
 
 class _SignUpPageState extends ConsumerState<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  void _handleContinue() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password must be at least 6 characters long'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    ref.read(onboardingProvider.notifier).setUserEmail(email);
+    ref.read(onboardingProvider.notifier).setUserPassword(password);
+    context.push('/onboarding/name');
   }
 
   @override
@@ -66,10 +100,19 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
                   filled: true,
                   fillColor: Colors.white,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(color: AppColors.border, width: 1),
@@ -79,18 +122,11 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                     borderSide: const BorderSide(color: AppColors.primaryPink, width: 2),
                   ),
                 ),
-                obscureText: true,
               ),
               const SizedBox(height: 40),
               BloomButton(
                 text: 'Create Account',
-                onPressed: () {
-                  final email = _emailController.text.trim();
-                  if (email.isNotEmpty) {
-                    ref.read(onboardingProvider.notifier).setUserEmail(email);
-                  }
-                  context.push('/onboarding/name');
-                },
+                onPressed: _handleContinue,
               ),
               const SizedBox(height: 16),
               TextButton(

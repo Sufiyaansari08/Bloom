@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/services/secure_token_storage.dart';
+import '../../../core/network/api_constants.dart';
 import '../../profile/presentation/providers/privacy_security_provider.dart';
 import 'doctor_report_service.dart';
 
@@ -43,12 +45,11 @@ class AiSummaryState {
 class DoctorReportAiService {
   DoctorReportAiService._();
 
-  /// Set this URL when your backend developer provides the endpoint.
-  /// Example: 'https://your-project.supabase.co/functions/v1/generate-doctor-summary'
+  /// Live production backend endpoint (initialized at app startup).
   /// If null or empty, the service runs in smart Mock/Dev mode.
   static String? backendUrl;
 
-  /// Optional bearer / API token for backend authorization.
+  /// Optional bearer / API token for backend authorization (auto-fetched if null).
   static String? authToken;
 
   /// Delay used for simulating AI generation in mock mode (can be set to Duration.zero in tests).
@@ -107,11 +108,12 @@ class DoctorReportAiService {
 
     if (url != null && url.isNotEmpty) {
       try {
+        final token = authToken ?? await SecureTokenStorage.instance.getAccessToken();
         final payload = buildPayload(data);
         final headers = <String, String>{
           'Content-Type': 'application/json',
-          if (authToken != null && authToken!.isNotEmpty)
-            'Authorization': 'Bearer $authToken',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         };
 
         final response = await http
@@ -135,11 +137,10 @@ class DoctorReportAiService {
           }
           return response.body.trim();
         } else {
-          throw Exception('Backend returned status ${response.statusCode}: ${response.body}');
+          debugPrint('Backend returned status ${response.statusCode}: ${response.body}');
         }
       } catch (e) {
         debugPrint('Error contacting AI backend: $e. Falling back to local generation.');
-        rethrow;
       }
     }
 

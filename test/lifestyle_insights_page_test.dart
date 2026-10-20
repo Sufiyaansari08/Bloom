@@ -67,6 +67,7 @@ void main() {
       dailyLogId: logId,
       symptomName: name,
       createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
       isSynced: false,
       isDeleted: false,
     );

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/services/auth_storage_service.dart';
+import '../../../../core/sync/sync_service.dart';
 
 class _PetalMote {
   final double angle; // radians around center
@@ -236,7 +237,12 @@ class _SplashPageState extends ConsumerState<SplashPage>
     try {
       final db = ref.read(databaseProvider);
       final isLoggedIn = await AuthStorageService.instance.isLoggedIn(db: db);
-      _target = isLoggedIn ? '/home' : '/welcome';
+      if (isLoggedIn) {
+        SyncService.instance.syncAll(db);
+        _target = '/home';
+      } else {
+        _target = '/welcome';
+      }
     } catch (_) {
       _target = '/welcome';
     }

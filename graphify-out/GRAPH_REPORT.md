@@ -1,17 +1,17 @@
-# Graph Report - bloom  (2026-10-17)
+# Graph Report - bloom  (2026-10-19)
 
 ## Corpus Check
-- 146 files · ~506,444 words
+- 154 files · ~514,681 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .xml 11, (none) 3, .properties 2)
 
 ## Summary
-- 1855 nodes · 3003 edges · 117 communities (105 shown, 12 thin omitted)
+- 2031 nodes · 3221 edges · 117 communities (109 shown, 8 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b7985e73`
+- Built from commit: `b2c112ed`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -23,7 +23,7 @@
 - Period Flow Pain Bottom Sheet Module
 - Privacy & App Lock Security
 - Daily Check-in & Symptoms Logging
-- bloom_button.dart
+- VoidCallback
 - Clinical PDF Report Generation
 - Cycle Comparison & Patterns
 - Privacy & App Lock Security
@@ -39,23 +39,23 @@
 - Cycle Comparison & Patterns
 - Notification & Reminder Scheduling
 - reminder_settings_page.dart
-- Privacy & App Lock Security
+- privacy_security_page.dart
 - Custom Reminders Management
 - Cycle Repository Module
 - in_app_lock_screen.dart
 - splash_page.dart
-- ConsumerWidget
-- userProfileStreamProvider
+- checkin_mood_page.dart
+- build
 - lifestyle_insights_page.dart
 - health_details_page.dart
 - Edit Profile Page Module
 - bloom_slider.dart
-- Calendar & Period Timeline
+- bloom_calendar.dart
 - onboarding_provider.dart
 - in_app_security_gate.dart
 - Drift Database & Tables Schema
 - Home Dashboard & Cycle State
-- State
+- period_start_page.dart
 - cycle_patterns_page.dart
 - bloom_app_bar.dart
 - Cycles Table Module
@@ -66,19 +66,19 @@
 - calendar_provider.dart
 - Report Problem Page Module
 - Authentication & User Session
-- package:flutter_riverpod/flutter_riverpod.dart
+- package:go_router/go_router.dart
 - doctor_report_result_page.dart
 - AI Insight Engine
 - Custom Reminders Management
 - signup_page.dart
-- CalendarPage
+- 🌸 Bloom — Backend & Cloud Architecture Technical Specification
 - Theme Tokens & Styling
-- quick_actions_grid.dart
+- sync_service.dart
 - ConsumerStatefulWidget
 - symptoms_patterns_page.dart
 - Daily Symptoms Table Module
 - app_shell.dart
-- core/database/database_providers.dart
+- goals_page.dart
 - bloom_flow_option.dart
 - Contact Support Page Module
 - Drift Database & Tables Schema
@@ -86,38 +86,39 @@
 - bloom_grid_item.dart
 - doctor_report_test.dart
 - doctor_report_ai_service.dart
-- package:flutter_test/flutter_test.dart
+- package:flutter_riverpod/flutter_riverpod.dart
 - Cycle Status Card Module
 - main.dart
 - doctor_report_setup_page.dart
-- package:flutter_riverpod/flutter_riverpod.dart
-- period_start_page.dart
-- VoidCallback
+- api_constants.dart
+- ConsumerWidget
+- auth_api_service.dart
 - Bloom Lifestyle Card Module
 - AI Insight Engine
-- insights_grid_button.dart
+- secure_token_storage.dart
 - Symptom Repository Module
 - app_settings_page.dart
-- String?
-- calendar_page.dart
+- api_client.dart
+- StatelessWidget
 - bloom_checkbox_tile.dart
 - Privacy & App Lock Security
 - User Repository Module
-- build
+- support_api_service.dart
 - AI Insight Engine
 - Give Feedback Page Module
-- profile_edit_test.dart
 - insights_hero_card_test.dart
-- past_checkin_test.dart
-- doctor_report_ai_observation_card.dart
+- List
+- ai_insight_service.dart
+- about_bloom_page.dart
 - database_providers.dart
 - AI Insight Engine
 - package:bloom/core/database/app_database.dart
 - in_app_lock_runtime_provider.dart
 - app_lock_choice_page.dart
-- mood_trends_page_test.dart
-- DailyCheckinNotifier
-- period_logging_provider.dart
+- compare_cycles_page_test.dart
+- symptoms_patterns_page_test.dart
+- AppDatabase
+- notificationSyncProvider
 - StateNotifier
 - name_page.dart
 - suggest_feature_page.dart
@@ -125,10 +126,9 @@
 - Mainactivity.Kt Module
 - build
 - inAppLockRuntimeProvider
-- core/database/database_providers.dart
+- profile_page.dart
 - lifestyle_insights_page_test.dart
 - package:google_fonts/google_fonts.dart
-- _SplashPageState
 
 ## God Nodes (most connected - your core abstractions)
 1. `privacySecurityProvider` - 29 edges
@@ -138,9 +138,9 @@
 5. `onboardingProvider` - 19 edges
 6. `dailyCheckinProvider` - 14 edges
 7. `AppDatabase` - 12 edges
-8. `CalendarPage` - 12 edges
-9. `inAppLockRuntimeProvider` - 11 edges
-10. `userRepositoryProvider` - 10 edges
+8. `databaseProvider` - 12 edges
+9. `CalendarPage` - 12 edges
+10. `inAppLockRuntimeProvider` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `build` --references--> `allCyclesStreamProvider`  [EXTRACTED]
@@ -150,7 +150,7 @@
 - `MockCalendarNotifier` --implements--> `CalendarNotifier`  [EXTRACTED]
   test/reminders_due_badge_test.dart → lib/features/calendar/presentation/providers/calendar_provider.dart
 - `initState` --references--> `onboardingProvider`  [EXTRACTED]
-  lib/features/onboarding/presentation/pages/last_period_page.dart → lib/features/onboarding/presentation/providers/onboarding_provider.dart
+  lib/features/onboarding/presentation/pages/health_details_page.dart → lib/features/onboarding/presentation/providers/onboarding_provider.dart
 - `_showSetPinDialog` --references--> `privacySecurityProvider`  [EXTRACTED]
   lib/features/profile/presentation/pages/app_lock_choice_page.dart → lib/features/profile/presentation/providers/privacy_security_provider.dart
 
@@ -160,7 +160,7 @@
 ## Hyperedges (group relationships)
 - **Offline-First Sync Entities** — unified_schema_sync_engine, unified_schema_user_profiles, unified_schema_cycles, unified_schema_daily_logs [INFERRED 0.85]
 
-## Communities (117 total, 12 thin omitted)
+## Communities (117 total, 8 thin omitted)
 
 ### Community 0 - "Drift Database & Tables Schema"
 Cohesion: 0.03
@@ -190,13 +190,13 @@ Nodes (27): autoLockTime, copyWith, fromJson, isAiDataUsageEnabled, isAnalyticsE
 Cohesion: 0.07
 Nodes (27): activity, clear, copyWith, fromCalendar, loadFromLog, mood, notes, painAfter1Hour (+19 more)
 
-### Community 7 - "bloom_button.dart"
-Cohesion: 0.25
-Nodes (7): backgroundColor, BloomButton, build, isPrimary, onPressed, text, width
+### Community 7 - "VoidCallback"
+Cohesion: 0.09
+Nodes (18): build, icon, iconColor, InsightsGridButton, label, onTap, backgroundColor, BloomButton (+10 more)
 
 ### Community 8 - "Clinical PDF Report Generation"
-Cohesion: 0.05
-Nodes (29): AiInsightService, getBodyTodayInsight, getCompareCyclesInsight, getCyclePatternInsight, getLifestyleCorrelationInsight, getMoodTrendInsight, instance, bgPink (+21 more)
+Cohesion: 0.07
+Nodes (22): bgPink, borderCol, _buildCycleSummaryChart, _buildHeader, _buildInfoCol, _buildLifestyleInsights, _buildMetricBox, _buildObservations (+14 more)
 
 ### Community 9 - "Cycle Comparison & Patterns"
 Cohesion: 0.08
@@ -207,8 +207,8 @@ Cohesion: 0.08
 Nodes (21): activeColor, build, clearPattern, color, createState, currentTouchPos, _currentTouchPosition, _dotCenter (+13 more)
 
 ### Community 11 - "reminders_page.dart"
-Cohesion: 0.09
-Nodes (23): actionLabel, _buildQuietHoursBanner, color, createState, date, description, _formatNotificationDate, _formatNotificationTime (+15 more)
+Cohesion: 0.07
+Nodes (28): build, build, build, _buildFlowStep, actionLabel, _buildQuietHoursBanner, color, createState (+20 more)
 
 ### Community 12 - "Notification & Reminder Scheduling"
 Cohesion: 0.09
@@ -223,8 +223,8 @@ Cohesion: 0.10
 Nodes (20): build, checkinData, cycleDay, DailySummaryCard, date, daysLate, expectedPeriodDate, isCycleStart (+12 more)
 
 ### Community 15 - "package:flutter/material.dart"
-Cohesion: 0.04
-Nodes (43): showPageInfoDialog, LoginPage, DoctorReportBanner, build, HistoryPage, build, ProfilePage, BodyTodayCard (+35 more)
+Cohesion: 0.08
+Nodes (20): showPageInfoDialog, build, HistoryPage, BodyTodayCard, build, message, BloomProBanner, build (+12 more)
 
 ### Community 16 - "doctor_report_service.dart"
 Cohesion: 0.04
@@ -239,12 +239,12 @@ Cohesion: 0.10
 Nodes (20): avatarPath, avgCycleLength, avgPeriodLength, bloodGroup, createdAt, dateOfBirth, email, fertileWindowEnabled (+12 more)
 
 ### Community 19 - "About Bloom Page Module"
-Cohesion: 0.13
-Nodes (4): build, build, build, build
+Cohesion: 0.10
+Nodes (10): build, _buildSectionGroup, _buildTileItem, HelpSupportPage, build, _buildIssueTile, TroubleshootingPage, build (+2 more)
 
 ### Community 20 - "Cycle Comparison & Patterns"
-Cohesion: 0.25
-Nodes (20): allCyclesStreamProvider, allDailyLogsStreamProvider, allSymptomsStreamProvider, build, DoctorReportResultPage, build, _DoctorReportAiObservationCardState, doctorReportAiProvider (+12 more)
+Cohesion: 0.22
+Nodes (25): allCyclesStreamProvider, allDailyLogsStreamProvider, allSymptomsStreamProvider, userProfileStreamProvider, build, _recomputeCyclePredictions, build, DoctorReportResultPage (+17 more)
 
 ### Community 21 - "Notification & Reminder Scheduling"
 Cohesion: 0.11
@@ -254,16 +254,16 @@ Nodes (11): cancel, cancelAll, cancelled, FakeFlutterLocalNotificationsPlatform,
 Cohesion: 0.14
 Nodes (12): _buildDailyLogReminderTile, _buildDialogStep, _buildPeriodReminderTile, _buildReminderTile, createState, _editQuietHours, _editSingleReminderTime, _formatQuietHours (+4 more)
 
-### Community 23 - "Privacy & App Lock Security"
-Cohesion: 0.13
-Nodes (16): databaseProvider, autoLockOptions, build, _buildActionTile, _buildExportRow, _buildSwitchTile, _confirmDeleteAccount, _confirmDeleteTrackingData (+8 more)
+### Community 23 - "privacy_security_page.dart"
+Cohesion: 0.05
+Nodes (30): databaseProvider, build, createState, dispose, _emailController, _handleForgotPassword, _isLoading, LoginPage (+22 more)
 
 ### Community 24 - "Custom Reminders Management"
-Cohesion: 0.12
-Nodes (14): DatabaseSeeder, purgeMockCycles, seedInitialData, _uuid, _db, ensureStandardReminders, getAllReminders, ReminderRepository (+6 more)
+Cohesion: 0.18
+Nodes (10): _db, ensureStandardReminders, getAllReminders, ReminderRepository, toggleReminder, updateReminderDaysBefore, updateReminderTime, upsertReminder (+2 more)
 
 ### Community 25 - "Cycle Repository Module"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (11): CycleRepository, DailyLogRepository, PeriodFlowPainResult, cycleRepo, db, main, cycleRepo, dailyLogRepo (+3 more)
 
 ### Community 26 - "in_app_lock_screen.dart"
@@ -271,40 +271,40 @@ Cohesion: 0.11
 Nodes (15): build, _buildKeypadButton, _buildPasswordView, _buildPatternView, _buildPinView, createState, dispose, _enteredPin (+7 more)
 
 ### Community 27 - "splash_page.dart"
-Cohesion: 0.07
-Nodes (28): angle, baseOpacity, build, _controller, createState, dispose, distance, _dotsFade (+20 more)
+Cohesion: 0.05
+Nodes (35): createState, dispose, initState, _pulseAnimation, _pulseController, reportData, DoctorReportData, angle (+27 more)
 
-### Community 28 - "ConsumerWidget"
-Cohesion: 0.09
-Nodes (19): build, CheckinLifestylePage, build, CheckinMoodPage, _showMoreSymptoms, CheckinNotesPage, build, CheckinRatingsPage (+11 more)
+### Community 28 - "checkin_mood_page.dart"
+Cohesion: 0.16
+Nodes (9): build, build, CheckinMoodPage, _showMoreSymptoms, symptoms, build, build, CheckinRemediesPage (+1 more)
 
-### Community 29 - "userProfileStreamProvider"
-Cohesion: 0.19
-Nodes (19): allRemindersStreamProvider, currentCycleStreamProvider, reminderRepositoryProvider, userProfileStreamProvider, build, CalendarPage, CalendarNotifier, calendarProvider (+11 more)
+### Community 29 - "build"
+Cohesion: 0.43
+Nodes (8): allRemindersStreamProvider, reminderRepositoryProvider, calendarProvider, build, _ReminderSettingsPageState, build, dismissedRemindersProvider, RemindersPage
 
 ### Community 30 - "lifestyle_insights_page.dart"
 Cohesion: 0.17
 Nodes (11): _buildAverageRow, _buildCorrelationRow, color, _CorrelationItem, createState, icon, _isLogForCycle, _parseWaterLiters (+3 more)
 
 ### Community 31 - "health_details_page.dart"
-Cohesion: 0.13
-Nodes (12): bloodGroups, build, createState, dispose, HealthDetailsPage, _HealthDetailsPageState, _heightController, _onContinue (+4 more)
+Cohesion: 0.12
+Nodes (13): bloodGroups, build, createState, dispose, HealthDetailsPage, _HealthDetailsPageState, _heightController, initState (+5 more)
 
 ### Community 32 - "Edit Profile Page Module"
 Cohesion: 0.11
-Nodes (16): bloodGroups, _buildDobPicker, _buildTextField, createState, _currentAvatar, dispose, _emailController, _formKey (+8 more)
+Nodes (18): bloodGroups, _buildDobPicker, _buildTextField, createState, _currentAvatar, dispose, EditProfilePage, _EditProfilePageState (+10 more)
 
 ### Community 33 - "bloom_slider.dart"
 Cohesion: 0.25
 Nodes (7): BloomSlider, build, divisions, max, min, onChanged, value
 
-### Community 34 - "Calendar & Period Timeline"
-Cohesion: 0.12
-Nodes (15): BloomCalendar, build, expectedPeriodDays, fertileDays, focusedDay, _isAnyPeriodDay, _isExpectedPeriodDay, _isFertileDay (+7 more)
+### Community 34 - "bloom_calendar.dart"
+Cohesion: 0.05
+Nodes (38): currentCycleStreamProvider, cycleRepositoryProvider, dailyLogRepositoryProvider, symptomRepositoryProvider, CalendarPage, _getMonthName, _handleChangePeriodDate, _handleCheckinForDay (+30 more)
 
 ### Community 35 - "onboarding_provider.dart"
-Cohesion: 0.09
-Nodes (22): bloodGroup, copyWith, cycleDuration, dateOfBirth, goals, heightCm, lastPeriodDate, OnboardingNotifier (+14 more)
+Cohesion: 0.08
+Nodes (24): bloodGroup, copyWith, cycleDuration, dateOfBirth, goals, heightCm, lastPeriodDate, OnboardingNotifier (+16 more)
 
 ### Community 36 - "in_app_security_gate.dart"
 Cohesion: 0.20
@@ -318,33 +318,33 @@ Nodes (12): AiInsight, AiInsightsCompanion, Cycle, CyclesCompanion, DailyLog, Da
 Cohesion: 0.13
 Nodes (14): completeCycle, _db, deleteCycle, getAllCycles, getCurrentCycle, getCycleForDate, getOrCreateCycleForPeriodDate, getPreviousCompletedCycle (+6 more)
 
-### Community 39 - "State"
-Cohesion: 0.32
-Nodes (6): PeriodStartPage, _PeriodStartPageState, PeriodFlowPainBottomSheetContent, _PeriodFlowPainBottomSheetContentState, PatternLockWidget, PatternLockWidgetState
+### Community 39 - "period_start_page.dart"
+Cohesion: 0.15
+Nodes (13): build, createState, initState, PeriodStartPage, _PeriodStartPageState, _pickDate, _selectedDate, PeriodFlowPainBottomSheetContent (+5 more)
 
 ### Community 40 - "cycle_patterns_page.dart"
-Cohesion: 0.11
-Nodes (7): _buildBarData, _buildSmallStatBox, createState, CyclePatternsPage, _CyclePatternsPageState, _selectedCycles, InsightsPage
+Cohesion: 0.07
+Nodes (16): _buildBarData, _buildSmallStatBox, createState, CyclePatternsPage, _selectedCycles, InsightsPage, _buildLegendRow, _buildTimelineMoodRow (+8 more)
 
 ### Community 41 - "bloom_app_bar.dart"
-Cohesion: 0.22
-Nodes (6): BloomAppBar, build, onSkip, preferredSize, progress, showSkip
+Cohesion: 0.29
+Nodes (5): build, onSkip, preferredSize, progress, showSkip
 
 ### Community 42 - "Cycles Table Module"
 Cohesion: 0.14
 Nodes (12): createdAt, cycleLength, endDate, id, isDeleted, isPredicted, isSynced, periodLength (+4 more)
 
 ### Community 43 - "insight_toggle_bar.dart"
-Cohesion: 0.25
-Nodes (5): build, _buildToggle, currentTab, InsightToggleBar, onTabChanged
+Cohesion: 0.13
+Nodes (10): build, _buildToggle, currentTab, InsightToggleBar, onTabChanged, BloomEmoticonPicker, build, moods (+2 more)
 
 ### Community 44 - "Daily Log Repository Module"
 Cohesion: 0.14
 Nodes (13): _db, getAllDailyLogs, getLogForDate, getLogsForCycle, getLogsForDateRange, movePeriodLog, removePeriodFlowForDate, _stripTime (+5 more)
 
 ### Community 45 - "quick_actions_grid.dart"
-Cohesion: 0.29
-Nodes (5): build, icon, prediction, symptom, SymptomPredictionCard
+Cohesion: 0.14
+Nodes (10): icon, label, onTap, _QuickAction, QuickActionsGrid, build, icon, prediction (+2 more)
 
 ### Community 46 - "Summary Metrics Row Module"
 Cohesion: 0.14
@@ -352,83 +352,83 @@ Nodes (13): build, _getMoodEmoji, _getMoodSubtext, _getPainSubtext, label, _Metr
 
 ### Community 47 - "calendar_provider.dart"
 Cohesion: 0.11
-Nodes (15): copyWith, daysLate, expectedPeriodDays, fertileDays, focusedDay, isPeriodLate, nextPeriodEndDate, nextPeriodStartDate (+7 more)
+Nodes (16): copyWith, dailyCheckinForSelectedDayProvider, daysLate, expectedPeriodDays, fertileDays, focusedDay, isPeriodLate, nextPeriodEndDate (+8 more)
 
 ### Community 48 - "Report Problem Page Module"
-Cohesion: 0.13
-Nodes (13): _appVersion, _attachedFileNames, build, _buildTextField, createState, _deviceModel, initState, _loadDeviceInfo (+5 more)
+Cohesion: 0.10
+Nodes (17): _appVersion, _attachedFileNames, build, _buildTextField, createState, _descController, _deviceModel, dispose (+9 more)
 
 ### Community 49 - "Authentication & User Session"
 Cohesion: 0.17
 Nodes (5): Fake, FakePathProviderPlatform, getApplicationDocumentsPath, main, tempDir
 
-### Community 50 - "package:flutter_riverpod/flutter_riverpod.dart"
+### Community 50 - "package:go_router/go_router.dart"
 Cohesion: 0.13
-Nodes (9): symptoms, remedies, options, goals, options, symptoms, flowOptions, symptoms (+1 more)
+Nodes (10): CheckinLifestylePage, CheckinNotesPage, CheckinRatingsPage, remedies, DoctorReportBanner, symptoms, flowOptions, _showMoreSymptoms (+2 more)
 
 ### Community 51 - "doctor_report_result_page.dart"
 Cohesion: 0.14
 Nodes (10): _buildAverageRow, _buildBarData, _buildChecklistItem, _buildInfoCol, _buildMetricBox, _buildPeriodBarData, _buildSectionTitle, _buildTimelineRow (+2 more)
 
 ### Community 52 - "AI Insight Engine"
-Cohesion: 0.15
-Nodes (11): category, createdAt, cyclePhase, generatedDate, headline, id, insightText, isDeleted (+3 more)
+Cohesion: 0.14
+Nodes (12): category, createdAt, cyclePhase, generatedDate, headline, id, insightText, isDeleted (+4 more)
 
 ### Community 53 - "Custom Reminders Management"
 Cohesion: 0.15
 Nodes (11): createdAt, daysBefore, id, isDeleted, isEnabled, isSynced, primaryKey, timeOfDay (+3 more)
 
 ### Community 54 - "signup_page.dart"
-Cohesion: 0.15
-Nodes (8): build, createState, dispose, _emailController, SignUpPage, _SignUpPageState, build, WelcomePage
+Cohesion: 0.18
+Nodes (8): createState, dispose, _emailController, _handleContinue, _obscurePassword, _passwordController, SignUpPage, _SignUpPageState
 
-### Community 55 - "CalendarPage"
-Cohesion: 0.33
-Nodes (9): cycleRepositoryProvider, dailyLogRepositoryProvider, _handleChangePeriodDate, _handleRemovePeriod, GoalsPage, build, PeriodLogPage, _showMoreSymptoms (+1 more)
+### Community 55 - "🌸 Bloom — Backend & Cloud Architecture Technical Specification"
+Cohesion: 0.05
+Nodes (40): 1. Executive Summary & Architecture Overview, 2.1 Critical Primary Key Audit: Client Strings vs. Postgres UUIDs, 2.2 Sync Metadata Columns Audit, 2.3 PostgreSQL Production DDL (`schema.sql`), 2. Data Models & Database Schemas (PostgreSQL), 3.1 Authentication Architecture, 3.2 Guest / Anonymous Migration Flow, 3.3 Password Reset Flow (+32 more)
 
 ### Community 56 - "Theme Tokens & Styling"
 Cohesion: 0.17
 Nodes (10): AppColors, background, border, lightPink, lightPurple, primaryPink, primaryPurple, secondaryText (+2 more)
 
-### Community 57 - "quick_actions_grid.dart"
-Cohesion: 0.29
-Nodes (5): icon, label, onTap, _QuickAction, QuickActionsGrid
+### Community 57 - "sync_service.dart"
+Cohesion: 0.10
+Nodes (17): _dio, exportUserData, getLastSyncTime, instance, isSuccess, _isSyncing, _lastSyncKey, message (+9 more)
 
 ### Community 58 - "ConsumerStatefulWidget"
-Cohesion: 0.20
-Nodes (9): DoctorReportAiObservationCard, CompareCyclesPage, LifestyleInsightsPage, MoodTrendsPage, SymptomsPatternsPage, LastPeriodPage, _LastPeriodPageState, InAppLockScreen (+1 more)
+Cohesion: 0.15
+Nodes (12): build, DoctorReportAiObservationCard, _DoctorReportAiObservationCardState, doctorReportAiProvider, CompareCyclesPage, LifestyleInsightsPage, SymptomsPatternsPage, PrivacySecurityPage (+4 more)
 
 ### Community 59 - "symptoms_patterns_page.dart"
 Cohesion: 0.11
 Nodes (17): badgeColor, badgeText, _buildCommonSymptomRow, _buildTimelineSymptomRow, _calculateTimingInfo, createState, _getSymptomIcon, icon (+9 more)
 
 ### Community 60 - "Daily Symptoms Table Module"
-Cohesion: 0.18
-Nodes (8): createdAt, dailyLogId, id, isDeleted, isSynced, primaryKey, severity, symptomName
+Cohesion: 0.17
+Nodes (9): createdAt, dailyLogId, id, isDeleted, isSynced, primaryKey, severity, symptomName (+1 more)
 
 ### Community 61 - "app_shell.dart"
 Cohesion: 0.18
 Nodes (7): AppShell, child, icon, isSelected, label, _NavItem, onTap
 
-### Community 62 - "core/database/database_providers.dart"
-Cohesion: 0.13
-Nodes (11): _buildLegendRow, _buildTimelineMoodRow, createState, _getMoodDisplay, _getPredominantMood, _isLogForCycle, _normalizeMood, _selectedCycles (+3 more)
+### Community 62 - "goals_page.dart"
+Cohesion: 0.18
+Nodes (6): DatabaseSeeder, purgeMockCycles, seedInitialData, _uuid, goals, _uuid
 
 ### Community 63 - "bloom_flow_option.dart"
 Cohesion: 0.29
 Nodes (6): BloomFlowOption, build, dropOpacity, isSelected, label, onTap
 
 ### Community 64 - "Contact Support Page Module"
-Cohesion: 0.20
-Nodes (9): _attachedFileNames, build, categories, ContactSupportPage, _ContactSupportPageState, createState, _pickFile, selectedCategory (+1 more)
+Cohesion: 0.22
+Nodes (7): _attachedFileNames, build, categories, createState, _pickFile, selectedCategory, _submit
 
 ### Community 65 - "Drift Database & Tables Schema"
-Cohesion: 0.20
-Nodes (7): AppDatabase, _db, getInsightsForCategory, getLatestInsight, InsightsRepository, saveInsight, watchInsightsForCategory
+Cohesion: 0.25
+Nodes (6): _db, getInsightsForCategory, getLatestInsight, InsightsRepository, saveInsight, watchInsightsForCategory
 
 ### Community 66 - "AI Insight Engine"
-Cohesion: 0.20
-Nodes (10): _buildLegendItem, _buildPhasePainRow, _buildSmallStatBox, createState, _getPainCategoryColor, _getPainCategoryText, _isLogForCycle, PainInsightsPage (+2 more)
+Cohesion: 0.13
+Nodes (12): _buildLegendItem, _buildPhasePainRow, _buildSmallStatBox, createState, _getPainCategoryColor, _getPainCategoryText, _isLogForCycle, PainInsightsPage (+4 more)
 
 ### Community 67 - "bloom_grid_item.dart"
 Cohesion: 0.29
@@ -440,11 +440,11 @@ Nodes (8): createTestCycle, createTestLog, createTestUser, main, createTestCycle
 
 ### Community 69 - "doctor_report_ai_service.dart"
 Cohesion: 0.09
-Nodes (17): AiSummaryStatus, authToken, backendUrl, buildPayload, copyWith, DoctorReportAiService, errorMessage, generateAiSummary (+9 more)
+Nodes (19): AiSummaryState, AiSummaryStatus, authToken, backendUrl, buildPayload, copyWith, DoctorReportAiNotifier, DoctorReportAiService (+11 more)
 
-### Community 70 - "package:flutter_test/flutter_test.dart"
-Cohesion: 0.17
-Nodes (6): createTestCycle, createTestLog, createTestSymptom, main, main, main
+### Community 70 - "package:flutter_riverpod/flutter_riverpod.dart"
+Cohesion: 0.15
+Nodes (5): main, createTestWidget, main, main, main
 
 ### Community 71 - "Cycle Status Card Module"
 Cohesion: 0.20
@@ -452,19 +452,23 @@ Nodes (9): build, cycleDay, CycleStatusCard, daysUntilPeriod, fertileWindowRange
 
 ### Community 72 - "main.dart"
 Cohesion: 0.12
-Nodes (11): notificationSyncProvider, BloomApp, build, db, initialSecurityState, _initNotifications, isLoggedIn, main (+3 more)
+Nodes (8): db, initialSecurityState, _initNotifications, isLoggedIn, main, purgeMockCycles, seedInitialData, targetRoute
 
 ### Community 73 - "doctor_report_setup_page.dart"
 Cohesion: 0.29
 Nodes (6): build, _buildCheckListItem, createState, DoctorReportSetupPage, _DoctorReportSetupPageState, _selectedCycles
 
-### Community 75 - "period_start_page.dart"
-Cohesion: 0.14
-Nodes (9): build, createState, initState, _selectedDate, build, createState, initState, _pickDate (+1 more)
+### Community 74 - "api_constants.dart"
+Cohesion: 0.10
+Nodes (19): ApiConstants, baseUrl, deleteAccount, doctorSummary, forgotPassword, googleAuth, healthCheck, login (+11 more)
 
-### Community 76 - "VoidCallback"
-Cohesion: 0.29
-Nodes (5): BloomOptionCard, build, isSelected, onTap, text
+### Community 75 - "ConsumerWidget"
+Cohesion: 0.14
+Nodes (12): CycleDurationPage, _onContinue, build, createState, initState, LastPeriodPage, _LastPeriodPageState, _selectedDate (+4 more)
+
+### Community 76 - "auth_api_service.dart"
+Cohesion: 0.11
+Nodes (15): AuthApiService, AuthResult, data, deleteAccount, _dio, errorMessage, _extractErrorMessage, failure (+7 more)
 
 ### Community 77 - "Bloom Lifestyle Card Module"
 Cohesion: 0.20
@@ -474,25 +478,25 @@ Nodes (9): BloomLifestyleCard, bottomWidget, build, icon, iconColor, onTap, titl
 Cohesion: 0.22
 Nodes (9): Bloom Flutter Dependencies & Packages, Bloom Menstrual Tracker Architecture, Bloom Design System & AppColors, Insights & Cycle Comparison Suite, Schema AI Insights Entity, Schema Cycles Entity, Schema DailyLogs Entity, Unified Drift & PostgreSQL Sync Engine (+1 more)
 
-### Community 79 - "insights_grid_button.dart"
-Cohesion: 0.25
-Nodes (6): build, icon, iconColor, InsightsGridButton, label, onTap
+### Community 79 - "secure_token_storage.dart"
+Cohesion: 0.11
+Nodes (15): clearSession, getAccessToken, getRefreshToken, getUserEmail, getUserId, hasValidSession, instance, _keyAccessToken (+7 more)
 
 ### Community 80 - "Symptom Repository Module"
 Cohesion: 0.25
 Nodes (7): _db, getAllSymptoms, getSymptomsForLog, setSymptomsForLog, SymptomRepository, watchAllSymptoms, watchSymptomsForLog
 
 ### Community 81 - "app_settings_page.dart"
-Cohesion: 0.14
-Nodes (14): userRepositoryProvider, AppSettingsPage, build, _buildActionTile, _buildDropdownTile, _buildInfoTile, _buildSwitchTile, cycleOptions (+6 more)
+Cohesion: 0.12
+Nodes (15): userRepositoryProvider, _handleLogin, build, build, AppSettingsPage, build, _buildActionTile, _buildDropdownTile (+7 more)
 
-### Community 82 - "String?"
-Cohesion: 0.29
-Nodes (5): BloomEmoticonPicker, build, moods, onMoodSelected, selectedMood
+### Community 82 - "api_client.dart"
+Cohesion: 0.13
+Nodes (7): ApiClient, _dio, instance, AuthInterceptor, _dio, onError, onRequest
 
-### Community 83 - "calendar_page.dart"
-Cohesion: 0.22
-Nodes (4): symptomRepositoryProvider, _getMonthName, _handleCheckinForDay, _handleLogPeriodForDay
+### Community 83 - "StatelessWidget"
+Cohesion: 0.13
+Nodes (9): build, ProfilePage, build, _buildSymptomList, EmergencyInformationPage, build, _buildSection, MedicalDisclaimerPage (+1 more)
 
 ### Community 84 - "bloom_checkbox_tile.dart"
 Cohesion: 0.29
@@ -502,9 +506,9 @@ Nodes (6): BloomCheckboxTile, build, icon, isSelected, onTap, text
 Cohesion: 0.29
 Nodes (5): _db, getUserProfile, saveUserProfile, UserRepository, watchUserProfile
 
-### Community 87 - "build"
-Cohesion: 0.19
-Nodes (8): build, build, build, build, build, build, _buildFlowStep, _getReminderItem
+### Community 87 - "support_api_service.dart"
+Cohesion: 0.15
+Nodes (8): _dio, instance, isSuccess, message, submitTicket, SupportApiService, SupportTicketResult, ticketId
 
 ### Community 88 - "AI Insight Engine"
 Cohesion: 0.29
@@ -514,13 +518,21 @@ Nodes (6): AiInsights, Cycles, DailyLogs, DailySymptoms, Reminders, UserProfiles
 Cohesion: 0.33
 Nodes (6): build, createState, GiveFeedbackPage, _GiveFeedbackPageState, _rating, _submit
 
-### Community 91 - "insights_hero_card_test.dart"
-Cohesion: 0.33
-Nodes (3): createCompletedCycle, createTestUser, main
-
-### Community 93 - "doctor_report_ai_observation_card.dart"
+### Community 90 - "insights_hero_card_test.dart"
 Cohesion: 0.15
-Nodes (7): createState, dispose, initState, _pulseAnimation, _pulseController, reportData, DoctorReportData
+Nodes (5): createCompletedCycle, createTestUser, main, createTestUser, main
+
+### Community 91 - "List"
+Cohesion: 0.22
+Nodes (4): build, options, build, options
+
+### Community 92 - "ai_insight_service.dart"
+Cohesion: 0.20
+Nodes (7): AiInsightService, getBodyTodayInsight, getCompareCyclesInsight, getCyclePatternInsight, getLifestyleCorrelationInsight, getMoodTrendInsight, instance
+
+### Community 93 - "about_bloom_page.dart"
+Cohesion: 0.20
+Nodes (6): AboutBloomPage, build, _buildFeatureCard, _buildListTile, _buildSectionHeader, _buildTimelineStep
 
 ### Community 94 - "database_providers.dart"
 Cohesion: 0.17
@@ -532,7 +544,7 @@ Nodes (4): createCompletedCycle, createTestLog, createTestProfile, main
 
 ### Community 96 - "package:bloom/core/database/app_database.dart"
 Cohesion: 0.12
-Nodes (9): createCompletedCycle, createTestUser, main, main, noSuchMethod, createCompletedCycle, createTestLog, createTestSymptom (+1 more)
+Nodes (9): createCompletedCycle, createTestUser, main, createCompletedCycle, createTestLog, createTestProfile, main, main (+1 more)
 
 ### Community 97 - "in_app_lock_runtime_provider.dart"
 Cohesion: 0.18
@@ -542,20 +554,24 @@ Nodes (11): copyWith, InAppLockRuntimeNotifier, InAppLockRuntimeState, isAppHidd
 Cohesion: 0.20
 Nodes (8): AppLockChoicePage, _AppLockChoicePageState, _buildDialogKeypadBtn, _buildMethodTile, createState, _showSetPasswordDialog, _showSetPatternDialog, _showSetPinDialog
 
-### Community 99 - "mood_trends_page_test.dart"
+### Community 99 - "compare_cycles_page_test.dart"
 Cohesion: 0.33
-Nodes (4): createCompletedCycle, createTestLog, createTestProfile, main
+Nodes (4): createTestCycle, createTestLog, createTestSymptom, main
 
-### Community 103 - "period_logging_provider.dart"
-Cohesion: 0.20
-Nodes (10): clear, copyWith, flowLevel, painLevel, PeriodLoggingNotifier, PeriodLoggingState, setFlowLevel, setPainLevel (+2 more)
+### Community 100 - "symptoms_patterns_page_test.dart"
+Cohesion: 0.33
+Nodes (4): createCompletedCycle, createTestLog, createTestSymptom, main
+
+### Community 102 - "notificationSyncProvider"
+Cohesion: 0.67
+Nodes (3): notificationSyncProvider, BloomApp, build
 
 ### Community 104 - "StateNotifier"
-Cohesion: 0.29
-Nodes (6): AiSummaryState, DoctorReportAiNotifier, InsightsNotifier, insightsProvider, InsightTab, setTab
+Cohesion: 0.24
+Nodes (9): CalendarNotifier, CalendarState, DailyCheckinNotifier, DailyCheckinState, InsightsNotifier, insightsProvider, InsightTab, setTab (+1 more)
 
 ### Community 106 - "name_page.dart"
-Cohesion: 0.25
+Cohesion: 0.29
 Nodes (6): build, createState, dispose, _nameController, NamePage, _NamePageState
 
 ### Community 108 - "suggest_feature_page.dart"
@@ -574,33 +590,33 @@ Nodes (4): build, HomePage, homeProvider, build
 Cohesion: 0.29
 Nodes (7): build, inAppLockRuntimeProvider, _onPatternComplete, _verifyPassword, _verifyPin, build, initState
 
-### Community 117 - "core/database/database_providers.dart"
-Cohesion: 0.13
-Nodes (7): build, icon, onTap, ProfilePage, _SettingsTile, showDivider, title
+### Community 117 - "profile_page.dart"
+Cohesion: 0.25
+Nodes (6): icon, onTap, ProfilePage, _SettingsTile, showDivider, title
 
 ### Community 118 - "lifestyle_insights_page_test.dart"
 Cohesion: 0.33
 Nodes (4): createCompletedCycle, createTestLog, createTestSymptom, main
 
 ## Knowledge Gaps
-- **1010 isolated node(s):** `schemaVersion`, `_openConnection`, `db`, `insightsRepositoryProvider`, `symptomsForLogStreamProvider` (+1005 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1221 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **1110 isolated node(s):** `schemaVersion`, `_openConnection`, `db`, `insightsRepositoryProvider`, `symptomsForLogStreamProvider` (+1105 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1358 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AppDatabase` connect `Drift Database & Tables Schema` to `Drift Database & Tables Schema`, `Home Dashboard & Cycle State`, `Daily Log Repository Module`, `Symptom Repository Module`, `User Repository Module`, `Custom Reminders Management`, `Cycle Repository Module`, `database_providers.dart`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `AppDatabase` connect `AppDatabase` to `Drift Database & Tables Schema`, `Drift Database & Tables Schema`, `Home Dashboard & Cycle State`, `Daily Log Repository Module`, `Symptom Repository Module`, `User Repository Module`, `Custom Reminders Management`, `Cycle Repository Module`, `database_providers.dart`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **What connects `schemaVersion`, `_openConnection`, `db` to the rest of the system?**
-  _1010 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1110 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Drift Database & Tables Schema` be split into smaller, more focused modules?**
   _Cohesion score 0.027264920566766854 - nodes in this community are weakly interconnected._
-- **Why does `build` connect `About Bloom Page Module` to `package:flutter/material.dart`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `build` connect `build` to `cycle_patterns_page.dart`, `Cycle Comparison & Patterns`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `AI Insight Engine` be split into smaller, more focused modules?**
   _Cohesion score 0.03508771929824561 - nodes in this community are weakly interconnected._
-- **Why does `build` connect `core/database/database_providers.dart` to `userProfileStreamProvider`, `Privacy & App Lock Security`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **Should `Notification & Reminder Scheduling` be split into smaller, more focused modules?**
   _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._
+- **Should `Home Dashboard & Cycle State` be split into smaller, more focused modules?**
+  _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._

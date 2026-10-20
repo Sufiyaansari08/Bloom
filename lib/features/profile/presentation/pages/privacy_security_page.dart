@@ -6,6 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/services/auth_storage_service.dart';
+import '../../../../core/services/secure_token_storage.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../auth/services/auth_api_service.dart';
 import '../providers/privacy_security_provider.dart';
 
 class PrivacySecurityPage extends ConsumerStatefulWidget {
@@ -246,6 +249,17 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
+                    // 0. Sync with Cloud
+                    _buildActionTile(
+                      icon: Icons.cloud_sync_rounded,
+                      title: 'Sync with Cloud',
+                      subtitle:
+                          'Upload offline records and pull cloud updates',
+                      showChevron: true,
+                      onTap: () => _handleSyncNow(context),
+                    ),
+                    const Divider(color: AppColors.border, height: 1),
+
                     // 1. Export my data
                     _buildActionTile(
                       icon: Icons.download_rounded,
@@ -615,6 +629,56 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
     );
   }
 
+  Future<void> _handleSyncNow(BuildContext context) async {
+    final hasSession = await SecureTokenStorage.instance.hasValidSession();
+    if (!hasSession) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Log in with an account to sync your data to the cloud.'),
+          action: SnackBarAction(
+            label: 'Log in',
+            textColor: Colors.white,
+            onPressed: () => context.push('/login'),
+          ),
+          backgroundColor: AppColors.primaryPurple,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Syncing with Bloom Cloud...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    final db = ref.read(databaseProvider);
+    final res = await SyncService.instance.syncAll(db);
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(res.message),
+        backgroundColor: res.isSuccess ? const Color(0xFF2E7D32) : Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _handleExportData(BuildContext context) async {
     final db = ref.read(databaseProvider);
     final logs = await db.select(db.dailyLogs).get();
@@ -651,7 +715,7 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Your Bloom records are compiled and ready for encrypted export:',
+                'Your Bloom records are compiled and ready for GDPR-compliant export:',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.secondaryText,
@@ -668,14 +732,13 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                 ),
                 child: Column(
                   children: [
-                    _buildExportRow(
-                        'Account', user?.name ?? 'Bloom User'),
+                    _buildExportRow('Account', user?.name ?? 'Bloom User'),
                     const Divider(height: 14, color: AppColors.border),
                     _buildExportRow('Cycle Records', '${cycles.length} cycles'),
                     const Divider(height: 14, color: AppColors.border),
                     _buildExportRow('Daily Health Logs', '${logs.length} check-ins'),
                     const Divider(height: 14, color: AppColors.border),
-                    _buildExportRow('Format', 'JSON & PDF archive'),
+                    _buildExportRow('Format', 'GDPR JSON archive'),
                   ],
                 ),
               ),
@@ -690,27 +753,30 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                   ),
                   elevation: 0,
                 ),
-                onPressed: () {
+                onPressed: () async {
                   Navigator.of(ctx).pop();
-                  final exportData = {
+                  final cloudData = await SyncService.instance.exportUserData();
+                  final exportData = cloudData ?? {
                     'exportedAt': DateTime.now().toIso8601String(),
                     'user': user?.name,
                     'cycleCount': cycles.length,
                     'logsCount': logs.length,
                   };
                   debugPrint('Export: ${jsonEncode(exportData)}');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white, size: 18),
-                          SizedBox(width: 8),
-                          Text('Data exported successfully to downloads folder.'),
-                        ],
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text('Data archive compiled successfully.'),
+                          ],
+                        ),
+                        backgroundColor: Color(0xFF2E7D32),
                       ),
-                      backgroundColor: Color(0xFF2E7D32),
-                    ),
-                  );
+                    );
+                  }
                 },
                 child: const Text(
                   'Download Archive',
@@ -812,13 +878,17 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
                       ),
                       onPressed: () async {
                         final db = ref.read(databaseProvider);
+                        await SyncService.instance.wipeTrackingData(db);
                         await db.delete(db.dailyLogs).go();
+                        await db.delete(db.cycles).go();
+                        await db.delete(db.dailySymptoms).go();
+                        await db.delete(db.aiInsights).go();
                         if (context.mounted) {
                           Navigator.of(ctx).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content:
-                                  Text('Tracking data successfully erased.'),
+                                  Text('Tracking data successfully erased from device and cloud.'),
                               backgroundColor: Colors.orange,
                             ),
                           );
@@ -840,88 +910,139 @@ class _PrivacySecurityPageState extends ConsumerState<PrivacySecurityPage> {
   }
 
   void _confirmDeleteAccount(BuildContext context) {
+    final passwordCtrl = TextEditingController();
+    bool isDeleting = false;
+
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppColors.background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.red, size: 24),
-              SizedBox(width: 8),
-              Text(
-                'Delete Account?',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: AppColors.text,
-                ),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.background,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
               ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'This action is permanent and cannot be undone. All your profile information, predictions, cycle history, and logged data will be completely deleted.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.secondaryText,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
+              title: const Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                      ),
-                      onPressed: () async {
-                        final db = ref.read(databaseProvider);
-                        await db.delete(db.dailyLogs).go();
-                        await db.delete(db.cycles).go();
-                        await db.delete(db.userProfiles).go();
-                        await AuthStorageService.instance.logout();
-                        if (context.mounted) {
-                          Navigator.of(ctx).pop();
-                          context.go('/welcome');
-                        }
-                      },
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                  Icon(Icons.error_outline, color: Colors.red, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'Delete Account?',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: AppColors.text,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'This action is permanent and cannot be undone. All your profile information, predictions, cycle history, and logged data will be completely expunged from the Bloom cloud.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.secondaryText,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Account Password',
+                      hintText: 'Enter password to confirm',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: isDeleting ? null : () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                          ),
+                          onPressed: isDeleting
+                              ? null
+                              : () async {
+                                  setDialogState(() => isDeleting = true);
+                                  final db = ref.read(databaseProvider);
+
+                                  final hasSession =
+                                      await SecureTokenStorage.instance.hasValidSession();
+                                  if (hasSession) {
+                                    final res = await AuthApiService.instance.deleteAccount(
+                                      password: passwordCtrl.text,
+                                    );
+                                    if (!res.isSuccess) {
+                                      setDialogState(() => isDeleting = false);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(res.errorMessage ?? 'Deletion failed'),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      }
+                                      return;
+                                    }
+                                  }
+
+                                  await db.delete(db.dailyLogs).go();
+                                  await db.delete(db.cycles).go();
+                                  await db.delete(db.dailySymptoms).go();
+                                  await db.delete(db.aiInsights).go();
+                                  await db.delete(db.userProfiles).go();
+                                  await AuthStorageService.instance.logout();
+
+                                  if (context.mounted) {
+                                    Navigator.of(ctx).pop();
+                                    context.go('/welcome');
+                                  }
+                                },
+                          child: isDeleting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Delete',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );

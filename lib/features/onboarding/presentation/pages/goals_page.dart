@@ -8,10 +8,15 @@ import '../providers/onboarding_provider.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/auth_storage_service.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../auth/services/auth_api_service.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:uuid/uuid.dart';
 
 class GoalsPage extends ConsumerWidget {
   const GoalsPage({super.key});
+
+  static const _uuid = Uuid();
 
   final List<Map<String, dynamic>> goals = const [
     {'label': 'Track my period', 'icon': Icons.calendar_month},
@@ -98,7 +103,7 @@ class GoalsPage extends ConsumerWidget {
                       ),
                     );
                   } else {
-                    final userId = DateTime.now().millisecondsSinceEpoch.toString();
+                    final userId = _uuid.v4();
                     await userRepo.saveUserProfile(
                       UserProfilesCompanion.insert(
                         id: userId,
@@ -120,7 +125,7 @@ class GoalsPage extends ConsumerWidget {
                   if (currentUser != null && state.lastPeriodDate != null) {
                     final cycleRepo = ref.read(cycleRepositoryProvider);
                     final newCycle = CyclesCompanion.insert(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      id: _uuid.v4(),
                       userId: currentUser.id,
                       startDate: state.lastPeriodDate!,
                       cycleLength: drift.Value(cycleLen),
@@ -128,7 +133,17 @@ class GoalsPage extends ConsumerWidget {
                     );
                     await cycleRepo.insertCycle(newCycle);
                   }
+                  final db = ref.read(databaseProvider);
+                  if (state.userEmail != null && state.userPassword != null) {
+                    await AuthApiService.instance.register(
+                      email: state.userEmail!,
+                      password: state.userPassword!,
+                      name: state.userName ?? 'User',
+                      db: db,
+                    );
+                  }
                   await AuthStorageService.instance.setLoggedIn(true);
+                  SyncService.instance.syncAll(db);
                   if (context.mounted) {
                     context.go('/home');
                   }

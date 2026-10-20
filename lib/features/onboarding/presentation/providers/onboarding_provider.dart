@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class OnboardingState {
   final String? userName;
   final String? userEmail;
+  final String? userPassword;
   final DateTime? dateOfBirth;
   final double? heightCm;
   final double? weightKg;
@@ -16,6 +17,7 @@ class OnboardingState {
   OnboardingState({
     this.userName,
     this.userEmail,
+    this.userPassword,
     this.dateOfBirth,
     this.heightCm,
     this.weightKg,
@@ -30,6 +32,7 @@ class OnboardingState {
   OnboardingState copyWith({
     String? userName,
     String? userEmail,
+    String? userPassword,
     DateTime? dateOfBirth,
     double? heightCm,
     double? weightKg,
@@ -43,6 +46,7 @@ class OnboardingState {
     return OnboardingState(
       userName: userName ?? this.userName,
       userEmail: userEmail ?? this.userEmail,
+      userPassword: userPassword ?? this.userPassword,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       heightCm: heightCm ?? this.heightCm,
       weightKg: weightKg ?? this.weightKg,
@@ -65,6 +69,10 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
 
   void setUserEmail(String email) {
     state = state.copyWith(userEmail: email);
+  }
+
+  void setUserPassword(String password) {
+    state = state.copyWith(userPassword: password);
   }
 
   void setHealthDetails({

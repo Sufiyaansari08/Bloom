@@ -463,31 +463,31 @@ class $UserProfilesTable extends UserProfiles
       periodPredictionEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}period_prediction_enabled'],
-      ) ?? true,
+      )!,
       ovulationPredictionEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}ovulation_prediction_enabled'],
-      ) ?? true,
+      )!,
       fertileWindowEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}fertile_window_enabled'],
-      ) ?? true,
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      ) ?? DateTime.now(),
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -1381,23 +1381,23 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
       isPredicted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_predicted'],
-      ) ?? false,
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      ) ?? DateTime.now(),
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -2206,19 +2206,19 @@ class $DailyLogsTable extends DailyLogs
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      ) ?? DateTime.now(),
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -2857,6 +2857,18 @@ class $DailySymptomsTable extends DailySymptoms
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -2894,6 +2906,7 @@ class $DailySymptomsTable extends DailySymptoms
     symptomName,
     severity,
     createdAt,
+    updatedAt,
     isSynced,
     isDeleted,
   ];
@@ -2948,6 +2961,12 @@ class $DailySymptomsTable extends DailySymptoms
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -2988,15 +3007,19 @@ class $DailySymptomsTable extends DailySymptoms
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -3012,6 +3035,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
   final String symptomName;
   final int? severity;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final bool isSynced;
   final bool isDeleted;
   const DailySymptom({
@@ -3020,6 +3044,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
     required this.symptomName,
     this.severity,
     required this.createdAt,
+    required this.updatedAt,
     required this.isSynced,
     required this.isDeleted,
   });
@@ -3033,6 +3058,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
       map['severity'] = Variable<int>(severity);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -3047,6 +3073,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
           ? const Value.absent()
           : Value(severity),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );
@@ -3063,6 +3090,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
       symptomName: serializer.fromJson<String>(json['symptomName']),
       severity: serializer.fromJson<int?>(json['severity']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -3076,6 +3104,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
       'symptomName': serializer.toJson<String>(symptomName),
       'severity': serializer.toJson<int?>(severity),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -3087,6 +3116,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
     String? symptomName,
     Value<int?> severity = const Value.absent(),
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isSynced,
     bool? isDeleted,
   }) => DailySymptom(
@@ -3095,6 +3125,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
     symptomName: symptomName ?? this.symptomName,
     severity: severity.present ? severity.value : this.severity,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -3109,6 +3140,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
           : this.symptomName,
       severity: data.severity.present ? data.severity.value : this.severity,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -3122,6 +3154,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
           ..write('symptomName: $symptomName, ')
           ..write('severity: $severity, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -3135,6 +3168,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
     symptomName,
     severity,
     createdAt,
+    updatedAt,
     isSynced,
     isDeleted,
   );
@@ -3147,6 +3181,7 @@ class DailySymptom extends DataClass implements Insertable<DailySymptom> {
           other.symptomName == this.symptomName &&
           other.severity == this.severity &&
           other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted);
 }
@@ -3157,6 +3192,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
   final Value<String> symptomName;
   final Value<int?> severity;
   final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -3166,6 +3202,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
     this.symptomName = const Value.absent(),
     this.severity = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3176,6 +3213,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
     required String symptomName,
     this.severity = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3188,6 +3226,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
     Expression<String>? symptomName,
     Expression<int>? severity,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -3198,6 +3237,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
       if (symptomName != null) 'symptom_name': symptomName,
       if (severity != null) 'severity': severity,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -3210,6 +3250,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
     Value<String>? symptomName,
     Value<int?>? severity,
     Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -3220,6 +3261,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
       symptomName: symptomName ?? this.symptomName,
       severity: severity ?? this.severity,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -3244,6 +3286,9 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -3264,6 +3309,7 @@ class DailySymptomsCompanion extends UpdateCompanion<DailySymptom> {
           ..write('symptomName: $symptomName, ')
           ..write('severity: $severity, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -3519,23 +3565,23 @@ class $RemindersTable extends Reminders
       isEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_enabled'],
-      ) ?? true,
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
-      ) ?? DateTime.now(),
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -3967,6 +4013,18 @@ class $AiInsightsTable extends AiInsights
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
   static const VerificationMeta _isSyncedMeta = const VerificationMeta(
     'isSynced',
   );
@@ -4007,6 +4065,7 @@ class $AiInsightsTable extends AiInsights
     insightText,
     generatedDate,
     createdAt,
+    updatedAt,
     isSynced,
     isDeleted,
   ];
@@ -4083,6 +4142,12 @@ class $AiInsightsTable extends AiInsights
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     if (data.containsKey('is_synced')) {
       context.handle(
         _isSyncedMeta,
@@ -4135,15 +4200,19 @@ class $AiInsightsTable extends AiInsights
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
-      ) ?? DateTime.now(),
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
       isSynced: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_synced'],
-      ) ?? false,
+      )!,
       isDeleted: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
-      ) ?? false,
+      )!,
     );
   }
 
@@ -4162,6 +4231,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
   final String insightText;
   final DateTime generatedDate;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final bool isSynced;
   final bool isDeleted;
   const AiInsight({
@@ -4173,6 +4243,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
     required this.insightText,
     required this.generatedDate,
     required this.createdAt,
+    required this.updatedAt,
     required this.isSynced,
     required this.isDeleted,
   });
@@ -4191,6 +4262,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
     map['insight_text'] = Variable<String>(insightText);
     map['generated_date'] = Variable<DateTime>(generatedDate);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_synced'] = Variable<bool>(isSynced);
     map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
@@ -4210,6 +4282,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
       insightText: Value(insightText),
       generatedDate: Value(generatedDate),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
       isSynced: Value(isSynced),
       isDeleted: Value(isDeleted),
     );
@@ -4229,6 +4302,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
       insightText: serializer.fromJson<String>(json['insightText']),
       generatedDate: serializer.fromJson<DateTime>(json['generatedDate']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
@@ -4245,6 +4319,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
       'insightText': serializer.toJson<String>(insightText),
       'generatedDate': serializer.toJson<DateTime>(generatedDate),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isSynced': serializer.toJson<bool>(isSynced),
       'isDeleted': serializer.toJson<bool>(isDeleted),
     };
@@ -4259,6 +4334,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
     String? insightText,
     DateTime? generatedDate,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? isSynced,
     bool? isDeleted,
   }) => AiInsight(
@@ -4270,6 +4346,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
     insightText: insightText ?? this.insightText,
     generatedDate: generatedDate ?? this.generatedDate,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
     isSynced: isSynced ?? this.isSynced,
     isDeleted: isDeleted ?? this.isDeleted,
   );
@@ -4289,6 +4366,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
           ? data.generatedDate.value
           : this.generatedDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
@@ -4305,6 +4383,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
           ..write('insightText: $insightText, ')
           ..write('generatedDate: $generatedDate, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted')
           ..write(')'))
@@ -4321,6 +4400,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
     insightText,
     generatedDate,
     createdAt,
+    updatedAt,
     isSynced,
     isDeleted,
   );
@@ -4336,6 +4416,7 @@ class AiInsight extends DataClass implements Insertable<AiInsight> {
           other.insightText == this.insightText &&
           other.generatedDate == this.generatedDate &&
           other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
           other.isSynced == this.isSynced &&
           other.isDeleted == this.isDeleted);
 }
@@ -4349,6 +4430,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
   final Value<String> insightText;
   final Value<DateTime> generatedDate;
   final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
   final Value<bool> isSynced;
   final Value<bool> isDeleted;
   final Value<int> rowid;
@@ -4361,6 +4443,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
     this.insightText = const Value.absent(),
     this.generatedDate = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4374,6 +4457,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
     required String insightText,
     required DateTime generatedDate,
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4391,6 +4475,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
     Expression<String>? insightText,
     Expression<DateTime>? generatedDate,
     Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
     Expression<bool>? isSynced,
     Expression<bool>? isDeleted,
     Expression<int>? rowid,
@@ -4404,6 +4489,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
       if (insightText != null) 'insight_text': insightText,
       if (generatedDate != null) 'generated_date': generatedDate,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (isSynced != null) 'is_synced': isSynced,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
@@ -4419,6 +4505,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
     Value<String>? insightText,
     Value<DateTime>? generatedDate,
     Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
     Value<bool>? isSynced,
     Value<bool>? isDeleted,
     Value<int>? rowid,
@@ -4432,6 +4519,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
       insightText: insightText ?? this.insightText,
       generatedDate: generatedDate ?? this.generatedDate,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
       isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
@@ -4465,6 +4553,9 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
     if (isSynced.present) {
       map['is_synced'] = Variable<bool>(isSynced.value);
     }
@@ -4488,6 +4579,7 @@ class AiInsightsCompanion extends UpdateCompanion<AiInsight> {
           ..write('insightText: $insightText, ')
           ..write('generatedDate: $generatedDate, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
@@ -5777,6 +5869,7 @@ typedef $$DailySymptomsTableCreateCompanionBuilder =
       required String symptomName,
       Value<int?> severity,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -5788,6 +5881,7 @@ typedef $$DailySymptomsTableUpdateCompanionBuilder =
       Value<String> symptomName,
       Value<int?> severity,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -5824,6 +5918,11 @@ class $$DailySymptomsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5872,6 +5971,11 @@ class $$DailySymptomsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -5910,6 +6014,9 @@ class $$DailySymptomsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
@@ -5954,6 +6061,7 @@ class $$DailySymptomsTableTableManager
                 Value<String> symptomName = const Value.absent(),
                 Value<int?> severity = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5963,6 +6071,7 @@ class $$DailySymptomsTableTableManager
                 symptomName: symptomName,
                 severity: severity,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -5974,6 +6083,7 @@ class $$DailySymptomsTableTableManager
                 required String symptomName,
                 Value<int?> severity = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5983,6 +6093,7 @@ class $$DailySymptomsTableTableManager
                 symptomName: symptomName,
                 severity: severity,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -6313,6 +6424,7 @@ typedef $$AiInsightsTableCreateCompanionBuilder =
       required String insightText,
       required DateTime generatedDate,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -6327,6 +6439,7 @@ typedef $$AiInsightsTableUpdateCompanionBuilder =
       Value<String> insightText,
       Value<DateTime> generatedDate,
       Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<bool> isDeleted,
       Value<int> rowid,
@@ -6378,6 +6491,11 @@ class $$AiInsightsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6441,6 +6559,11 @@ class $$AiInsightsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isSynced => $composableBuilder(
     column: $table.isSynced,
     builder: (column) => ColumnOrderings(column),
@@ -6491,6 +6614,9 @@ class $$AiInsightsTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
   GeneratedColumn<bool> get isSynced =>
       $composableBuilder(column: $table.isSynced, builder: (column) => column);
 
@@ -6537,6 +6663,7 @@ class $$AiInsightsTableTableManager
                 Value<String> insightText = const Value.absent(),
                 Value<DateTime> generatedDate = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6549,6 +6676,7 @@ class $$AiInsightsTableTableManager
                 insightText: insightText,
                 generatedDate: generatedDate,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,
@@ -6563,6 +6691,7 @@ class $$AiInsightsTableTableManager
                 required String insightText,
                 required DateTime generatedDate,
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6575,6 +6704,7 @@ class $$AiInsightsTableTableManager
                 insightText: insightText,
                 generatedDate: generatedDate,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 isSynced: isSynced,
                 isDeleted: isDeleted,
                 rowid: rowid,

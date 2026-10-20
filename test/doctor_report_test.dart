@@ -151,6 +151,7 @@ void main() {
           symptomName: 'Cramps',
           severity: 2,
           createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
           isSynced: false,
           isDeleted: false,
         ),

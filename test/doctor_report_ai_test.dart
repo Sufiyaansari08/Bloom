@@ -117,6 +117,7 @@ void main() {
         symptomName: 'Bloating',
         severity: 2,
         createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
         isSynced: false,
         isDeleted: false,
       );

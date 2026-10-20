@@ -7,6 +7,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/bloom_button.dart';
 
+import '../../../../core/services/support_api_service.dart';
+
 class ReportProblemPage extends StatefulWidget {
   const ReportProblemPage({super.key});
 
@@ -15,11 +17,21 @@ class ReportProblemPage extends StatefulWidget {
 }
 
 class _ReportProblemPageState extends State<ReportProblemPage> {
+  final TextEditingController _descController = TextEditingController();
+  final TextEditingController _stepsController = TextEditingController();
   List<String> _attachedFileNames = [];
+  bool _isSubmitting = false;
   
   String _appVersion = 'Loading...';
   String _deviceModel = 'Loading...';
   String _osVersion = 'Loading...';
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    _stepsController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -83,6 +95,36 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
   }
 
   void _submit() async {
+    final desc = _descController.text.trim();
+    if (desc.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please describe the issue before submitting.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    final fullDescription = StringBuffer(desc);
+    if (_stepsController.text.trim().isNotEmpty) {
+      fullDescription.write('\n\nSteps to reproduce:\n${_stepsController.text.trim()}');
+    }
+
+    final res = await SupportApiService.instance.submitTicket(
+      ticketType: 'problem_report',
+      title: 'Problem Report: ${desc.length > 30 ? desc.substring(0, 30) : desc}',
+      description: fullDescription.toString(),
+      appVersion: _appVersion,
+      deviceModel: _deviceModel,
+      osVersion: _osVersion,
+    );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
     await showDialog(
       context: context,
       builder: (context) {
@@ -105,9 +147,11 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Thank you for bringing this to our attention.',
-                style: TextStyle(color: AppColors.secondaryText, fontSize: 14, height: 1.5),
+              Text(
+                res.isSuccess
+                    ? 'Thank you! Your ticket ID is #${res.ticketId?.substring(0, 8) ?? 'received'}. Our engineering team has received your report.'
+                    : 'Report saved locally. Thank you for bringing this to our attention.',
+                style: const TextStyle(color: AppColors.secondaryText, fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -152,7 +196,7 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.secondaryText, letterSpacing: 0.5),
               ),
               const SizedBox(height: 8),
-              _buildTextField('Describe the issue...'),
+              _buildTextField('Describe the issue...', controller: _descController),
               const SizedBox(height: 24),
 
               const Text(
@@ -160,7 +204,7 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.secondaryText, letterSpacing: 0.5),
               ),
               const SizedBox(height: 8),
-              _buildTextField('1. Go to...\n2. Tap on...', maxLines: 4),
+              _buildTextField('1. Go to...\n2. Tap on...', controller: _stepsController, maxLines: 4),
               const SizedBox(height: 24),
 
               const Text(
@@ -259,8 +303,8 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
               const SizedBox(height: 32),
 
               BloomButton(
-                text: 'Submit Report',
-                onPressed: _submit,
+                text: _isSubmitting ? 'Submitting...' : 'Submit Report',
+                onPressed: _isSubmitting ? () {} : _submit,
               ),
               const SizedBox(height: 32),
             ],
@@ -270,8 +314,9 @@ class _ReportProblemPageState extends State<ReportProblemPage> {
     );
   }
 
-  Widget _buildTextField(String hint, {int maxLines = 1}) {
+  Widget _buildTextField(String hint, {TextEditingController? controller, int maxLines = 1}) {
     return TextField(
+      controller: controller,
       maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hint,
